@@ -48,6 +48,7 @@ export interface Conversation {
   lastMessage: string | null;
   /** @nullable */
   lastMessageAt: string | null;
+  operatorMode: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -103,6 +104,7 @@ export interface ConversationWithMessages {
   lastMessage: string | null;
   /** @nullable */
   lastMessageAt: string | null;
+  operatorMode: boolean;
   createdAt: string;
   updatedAt: string;
   messages: Message[];
@@ -145,6 +147,13 @@ export interface UpdateConversationBody {
   customerPhone?: string | null;
   /** @nullable */
   leadId?: number | null;
+  operatorMode?: boolean;
+}
+
+export interface OperatorReplyBody {
+  content: string;
+  /** @nullable */
+  operatorName?: string | null;
 }
 
 export type SendMessageBodyChannel =
@@ -296,6 +305,82 @@ export interface UpdateLeadBody {
   notes?: string | null;
 }
 
+export interface BookLeadBody {
+  /** @nullable */
+  travelDate?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface Promotion {
+  id: number;
+  title: string;
+  description: string;
+  /** @nullable */
+  discount: string | null;
+  /** @nullable */
+  destination: string | null;
+  /** @nullable */
+  validUntil: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface CreatePromotionBody {
+  title: string;
+  description: string;
+  /** @nullable */
+  discount?: string | null;
+  /** @nullable */
+  destination?: string | null;
+  /** @nullable */
+  validUntil?: string | null;
+}
+
+export type AnalyzeCallBodyLanguage =
+  (typeof AnalyzeCallBodyLanguage)[keyof typeof AnalyzeCallBodyLanguage];
+
+export const AnalyzeCallBodyLanguage = {
+  uz: "uz",
+  ru: "ru",
+  en: "en",
+} as const;
+
+export interface AnalyzeCallBody {
+  transcript: string;
+  /** @nullable */
+  audioBase64?: string | null;
+  language?: AnalyzeCallBodyLanguage;
+}
+
+export type CallAnalysisResultSentiment =
+  (typeof CallAnalysisResultSentiment)[keyof typeof CallAnalysisResultSentiment];
+
+export const CallAnalysisResultSentiment = {
+  positive: "positive",
+  neutral: "neutral",
+  negative: "negative",
+} as const;
+
+export type CallAnalysisResultLeadQuality =
+  (typeof CallAnalysisResultLeadQuality)[keyof typeof CallAnalysisResultLeadQuality];
+
+export const CallAnalysisResultLeadQuality = {
+  hot: "hot",
+  warm: "warm",
+  cold: "cold",
+} as const;
+
+export interface CallAnalysisResult {
+  summary: string;
+  clientRequest: string;
+  objections: string;
+  missedOpportunities: string;
+  recommendations: string;
+  sentiment: CallAnalysisResultSentiment;
+  leadQuality: CallAnalysisResultLeadQuality;
+}
+
 export interface ChannelCount {
   channel: string;
   count: number;
@@ -321,6 +406,8 @@ export const ActivityItemType = {
   new_message: "new_message",
   booking: "booking",
   status_change: "status_change",
+  follow_up: "follow_up",
+  operator_reply: "operator_reply",
 } as const;
 
 export interface ActivityItem {
@@ -332,6 +419,21 @@ export interface ActivityItem {
   /** @nullable */
   leadId: number | null;
   createdAt: string;
+}
+
+export interface TimeSeriesPoint {
+  date: string;
+  messages: number;
+  leads: number;
+  bookings: number;
+}
+
+export interface TimeSeriesStats {
+  period: string;
+  data: TimeSeriesPoint[];
+  totalMessages: number;
+  totalLeads: number;
+  totalBookings: number;
 }
 
 export type ListConversationsParams = {
@@ -360,4 +462,17 @@ export const ListLeadsSegment = {
   hot: "hot",
   warm: "warm",
   cold: "cold",
+} as const;
+
+export type GetTimeSeriesParams = {
+  period?: GetTimeSeriesPeriod;
+};
+
+export type GetTimeSeriesPeriod =
+  (typeof GetTimeSeriesPeriod)[keyof typeof GetTimeSeriesPeriod];
+
+export const GetTimeSeriesPeriod = {
+  daily: "daily",
+  weekly: "weekly",
+  monthly: "monthly",
 } as const;

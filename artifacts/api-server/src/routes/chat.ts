@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, conversationsTable, messagesTable, leadsTable, activityTable } from "@workspace/db";
+import { db, conversationsTable, messagesTable, leadsTable, activityTable, promotionsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { SendMessageBody } from "@workspace/api-zod";
 import { openai } from "@workspace/integrations-openai-ai-server";
@@ -7,7 +7,7 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-const OKSTOURS_SYSTEM_PROMPT = `Siz OKSTours kompaniyasining rasmiy AI Agentsiz.
+const BASE_SYSTEM_PROMPT = `Siz OKSTours kompaniyasining rasmiy AI Agentsiz.
 Sizning vazifangiz: aviabilet, tur paketlar, mehmonxona, transfer va vizaga oid savollarni qabul qilish, mijozga eng aniq javob berish, sotuvni oshirish, kompaniya obro'sini ko'tarish, mijoz bilan yoqimli muloqot qilish.
 
 SHAXSIYAT:
@@ -26,6 +26,7 @@ JAVOB QOIDALARI:
 4) Mijoz noaniq yozsa → eng minimal savollar bilan aniqlik kirit.
 5) Har doim alternativ taklif ber.
 6) Qimmat variant bo'lsa → o'rtacha yoki arzon variant bilan solishtir.
+7) Mijoz javob bermasa → "Sizga ma'lumot kerak bo'lsa, men shu yerdaman ❤️" de.
 
 SOTUV STRATEGIYASI (yumshoq):
 - Upsell: "Bu yo'nalishda qo'shimcha bagajli variant ham bor."
@@ -40,6 +41,22 @@ JAVOB FORMATI:
 4) Xohlasangiz takliflar
 
 Emojini kam ishlating. Har doim o'zbek tilida javob bering agar mijoz o'zbek tilida yozsa. Agar rus tilida yozsa — rus tilida javob bering. Ingliz tilida yozsa — ingliz tilida.`;
+
+async function buildSystemPrompt(): Promise<string> {
+  const activePromos = await db.select().from(promotionsTable).where(eq(promotionsTable.active, 1)).limit(10);
+  if (activePromos.length === 0) return BASE_SYSTEM_PROMPT;
+
+  const promoText = activePromos.map((p) =>
+    `- ${p.title}: ${p.description}${p.discount ? ` (Chegirma: ${p.discount})` : ""}${p.destination ? ` [${p.destination}]` : ""}${p.validUntil ? ` — ${p.validUntil} gacha` : ""}`
+  ).join("\n");
+
+  return `${BASE_SYSTEM_PROMPT}
+
+FAOL AKSIYALAR VA PROMOLAR:
+${promoText}
+
+Mijoz tur yoki chipta haqida so'rasa, tegishli aksiyalarni yumshoq tarzda aytib o'ting.`;
+}
 
 router.post("/chat", async (req, res): Promise<void> => {
   const parsed = SendMessageBody.safeParse(req.body);
@@ -96,19 +113,23 @@ router.post("/chat", async (req, res): Promise<void> => {
     .orderBy(desc(messagesTable.createdAt))
     .limit(20);
 
+  const systemPrompt = await buildSystemPrompt();
+
   const chatMessages = [
-    { role: "system" as const, content: OKSTOURS_SYSTEM_PROMPT },
-    ...history.reverse().map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    })),
+    { role: "system" as const, content: systemPrompt },
+    ...history.reverse()
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
   ];
 
   let aiResponse = "";
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
-      max_completion_tokens: 1024,
+      model: "gpt-4o-mini",
+      max_tokens: 1024,
       messages: chatMessages,
     });
     aiResponse = completion.choices[0]?.message?.content ?? "Kechirasiz, javob berishda xatolik yuz berdi.";

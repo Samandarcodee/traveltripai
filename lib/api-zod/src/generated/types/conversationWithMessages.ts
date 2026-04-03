@@ -23,6 +23,7 @@ export interface ConversationWithMessages {
   lastMessage: string | null;
   /** @nullable */
   lastMessageAt: string | null;
+  operatorMode: boolean;
   createdAt: string;
   updatedAt: string;
   messages: Message[];

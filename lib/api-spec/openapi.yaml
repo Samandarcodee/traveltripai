@@ -20,13 +20,16 @@ tags:
     description: AI chat operations
   - name: stats
     description: Statistics and analytics
+  - name: promotions
+    description: Promo and discount management
+  - name: callanalysis
+    description: Call recording analysis
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -154,6 +157,62 @@ paths:
                 items:
                   $ref: "#/components/schemas/Message"
 
+  /conversations/{id}/operator-reply:
+    post:
+      operationId: operatorReply
+      tags: [conversations]
+      summary: Operator sends a message in a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OperatorReplyBody"
+      responses:
+        "200":
+          description: Operator message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /conversations/{id}/follow-up:
+    post:
+      operationId: sendFollowUp
+      tags: [conversations]
+      summary: Send an automatic follow-up message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Follow-up sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /chat:
     post:
       operationId: sendMessage
@@ -277,6 +336,115 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /leads/{id}/book:
+    post:
+      operationId: bookLead
+      tags: [leads]
+      summary: Confirm booking for a lead and send confirmation message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookLeadBody"
+      responses:
+        "200":
+          description: Booking confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /promotions:
+    get:
+      operationId: listPromotions
+      tags: [promotions]
+      summary: List all active promotions
+      responses:
+        "200":
+          description: List of promotions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Promotion"
+    post:
+      operationId: createPromotion
+      tags: [promotions]
+      summary: Create a new promotion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePromotionBody"
+      responses:
+        "201":
+          description: Created promotion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Promotion"
+
+  /promotions/{id}:
+    delete:
+      operationId: deletePromotion
+      tags: [promotions]
+      summary: Delete a promotion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /call-analysis:
+    post:
+      operationId: analyzeCall
+      tags: [callanalysis]
+      summary: Analyze a call transcript or audio text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeCallBody"
+      responses:
+        "200":
+          description: Call analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallAnalysisResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /stats/dashboard:
     get:
       operationId: getDashboardStats
@@ -304,6 +472,26 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ActivityItem"
+
+  /stats/time-series:
+    get:
+      operationId: getTimeSeries
+      tags: [stats]
+      summary: Get time-series stats (daily/weekly/monthly)
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [daily, weekly, monthly]
+      responses:
+        "200":
+          description: Time series data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeSeriesStats"
 
 components:
   schemas:
@@ -344,6 +532,8 @@ components:
           type: ["string", "null"]
         lastMessageAt:
           type: ["string", "null"]
+        operatorMode:
+          type: boolean
         createdAt:
           type: string
         updatedAt:
@@ -357,6 +547,7 @@ components:
         - leadId
         - lastMessage
         - lastMessageAt
+        - operatorMode
         - createdAt
         - updatedAt
 
@@ -381,6 +572,8 @@ components:
           type: ["string", "null"]
         lastMessageAt:
           type: ["string", "null"]
+        operatorMode:
+          type: boolean
         createdAt:
           type: string
         updatedAt:
@@ -398,6 +591,7 @@ components:
         - leadId
         - lastMessage
         - lastMessageAt
+        - operatorMode
         - createdAt
         - updatedAt
         - messages
@@ -427,6 +621,18 @@ components:
           type: ["string", "null"]
         leadId:
           type: ["integer", "null"]
+        operatorMode:
+          type: boolean
+
+    OperatorReplyBody:
+      type: object
+      properties:
+        content:
+          type: string
+        operatorName:
+          type: ["string", "null"]
+      required:
+        - content
 
     Message:
       type: object
@@ -578,6 +784,101 @@ components:
         notes:
           type: ["string", "null"]
 
+    BookLeadBody:
+      type: object
+      properties:
+        travelDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    Promotion:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        discount:
+          type: ["string", "null"]
+        destination:
+          type: ["string", "null"]
+        validUntil:
+          type: ["string", "null"]
+        active:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - description
+        - discount
+        - destination
+        - validUntil
+        - active
+        - createdAt
+
+    CreatePromotionBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        discount:
+          type: ["string", "null"]
+        destination:
+          type: ["string", "null"]
+        validUntil:
+          type: ["string", "null"]
+      required:
+        - title
+        - description
+
+    AnalyzeCallBody:
+      type: object
+      properties:
+        transcript:
+          type: string
+        audioBase64:
+          type: ["string", "null"]
+        language:
+          type: string
+          enum: [uz, ru, en]
+      required:
+        - transcript
+
+    CallAnalysisResult:
+      type: object
+      properties:
+        summary:
+          type: string
+        clientRequest:
+          type: string
+        objections:
+          type: string
+        missedOpportunities:
+          type: string
+        recommendations:
+          type: string
+        sentiment:
+          type: string
+          enum: [positive, neutral, negative]
+        leadQuality:
+          type: string
+          enum: [hot, warm, cold]
+      required:
+        - summary
+        - clientRequest
+        - objections
+        - missedOpportunities
+        - recommendations
+        - sentiment
+        - leadQuality
+
     DashboardStats:
       type: object
       properties:
@@ -630,7 +931,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [new_lead, new_message, booking, status_change]
+          enum: [new_lead, new_message, booking, status_change, follow_up, operator_reply]
         description:
           type: string
         conversationId:
@@ -646,3 +947,42 @@ components:
         - conversationId
         - leadId
         - createdAt
+
+    TimeSeriesStats:
+      type: object
+      properties:
+        period:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSeriesPoint"
+        totalMessages:
+          type: integer
+        totalLeads:
+          type: integer
+        totalBookings:
+          type: integer
+      required:
+        - period
+        - data
+        - totalMessages
+        - totalLeads
+        - totalBookings
+
+    TimeSeriesPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        messages:
+          type: integer
+        leads:
+          type: integer
+        bookings:
+          type: integer
+      required:
+        - date
+        - messages
+        - leads
+        - bookings

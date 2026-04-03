@@ -5,13 +5,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
 
-// Pages
 import Dashboard from "@/pages/dashboard";
 import Chat from "@/pages/chat";
 import Conversations from "@/pages/conversations";
 import ConversationDetail from "@/pages/conversation-detail";
 import Leads from "@/pages/leads";
 import LeadDetail from "@/pages/lead-detail";
+import Promotions from "@/pages/promotions";
+import Stats from "@/pages/stats";
+import CallAnalysis from "@/pages/call-analysis";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,9 @@ function Router() {
         <Route path="/conversations/:id" component={ConversationDetail} />
         <Route path="/leads" component={Leads} />
         <Route path="/leads/:id" component={LeadDetail} />
+        <Route path="/promotions" component={Promotions} />
+        <Route path="/stats" component={Stats} />
+        <Route path="/call-analysis" component={CallAnalysis} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

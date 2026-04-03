@@ -14,4 +14,6 @@ export const ActivityItemType = {
   new_message: "new_message",
   booking: "booking",
   status_change: "status_change",
+  follow_up: "follow_up",
+  operator_reply: "operator_reply",
 } as const;

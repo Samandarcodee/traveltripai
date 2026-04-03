@@ -8,7 +8,6 @@
 import * as zod from "zod";
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -39,6 +38,7 @@ export const ListConversationsResponseItem = zod.object({
   leadId: zod.number().nullable(),
   lastMessage: zod.string().nullable(),
   lastMessageAt: zod.string().nullable(),
+  operatorMode: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -85,6 +85,7 @@ export const GetConversationResponse = zod.object({
   leadId: zod.number().nullable(),
   lastMessage: zod.string().nullable(),
   lastMessageAt: zod.string().nullable(),
+  operatorMode: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
   messages: zod.array(
@@ -110,6 +111,7 @@ export const UpdateConversationBody = zod.object({
   customerName: zod.string().nullish(),
   customerPhone: zod.string().nullish(),
   leadId: zod.number().nullish(),
+  operatorMode: zod.boolean().optional(),
 });
 
 export const UpdateConversationResponse = zod.object({
@@ -128,6 +130,7 @@ export const UpdateConversationResponse = zod.object({
   leadId: zod.number().nullable(),
   lastMessage: zod.string().nullable(),
   lastMessageAt: zod.string().nullable(),
+  operatorMode: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -149,6 +152,41 @@ export const GetConversationMessagesResponseItem = zod.object({
 export const GetConversationMessagesResponse = zod.array(
   GetConversationMessagesResponseItem,
 );
+
+/**
+ * @summary Operator sends a message in a conversation
+ */
+export const OperatorReplyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const OperatorReplyBody = zod.object({
+  content: zod.string(),
+  operatorName: zod.string().nullish(),
+});
+
+export const OperatorReplyResponse = zod.object({
+  id: zod.number(),
+  conversationId: zod.number(),
+  role: zod.enum(["user", "assistant", "operator"]),
+  content: zod.string(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Send an automatic follow-up message
+ */
+export const SendFollowUpParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SendFollowUpResponse = zod.object({
+  id: zod.number(),
+  conversationId: zod.number(),
+  role: zod.enum(["user", "assistant", "operator"]),
+  content: zod.string(),
+  createdAt: zod.string(),
+});
 
 /**
  * @summary Send a message and get AI response
@@ -275,6 +313,86 @@ export const UpdateLeadResponse = zod.object({
 });
 
 /**
+ * @summary Confirm booking for a lead and send confirmation message
+ */
+export const BookLeadParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const BookLeadBody = zod.object({
+  travelDate: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const BookLeadResponse = zod.object({
+  id: zod.number(),
+  name: zod.string().nullable(),
+  phone: zod.string().nullable(),
+  email: zod.string().nullable(),
+  segment: zod.enum(["hot", "warm", "cold"]),
+  interest: zod.string().nullable(),
+  destination: zod.string().nullable(),
+  budget: zod.string().nullable(),
+  status: zod.enum(["new", "contacted", "qualified", "booked", "lost"]),
+  notes: zod.string().nullable(),
+  conversationId: zod.number().nullable(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary List all active promotions
+ */
+export const ListPromotionsResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  description: zod.string(),
+  discount: zod.string().nullable(),
+  destination: zod.string().nullable(),
+  validUntil: zod.string().nullable(),
+  active: zod.boolean(),
+  createdAt: zod.string(),
+});
+export const ListPromotionsResponse = zod.array(ListPromotionsResponseItem);
+
+/**
+ * @summary Create a new promotion
+ */
+export const CreatePromotionBody = zod.object({
+  title: zod.string(),
+  description: zod.string(),
+  discount: zod.string().nullish(),
+  destination: zod.string().nullish(),
+  validUntil: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete a promotion
+ */
+export const DeletePromotionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Analyze a call transcript or audio text
+ */
+export const AnalyzeCallBody = zod.object({
+  transcript: zod.string(),
+  audioBase64: zod.string().nullish(),
+  language: zod.enum(["uz", "ru", "en"]).optional(),
+});
+
+export const AnalyzeCallResponse = zod.object({
+  summary: zod.string(),
+  clientRequest: zod.string(),
+  objections: zod.string(),
+  missedOpportunities: zod.string(),
+  recommendations: zod.string(),
+  sentiment: zod.enum(["positive", "neutral", "negative"]),
+  leadQuality: zod.enum(["hot", "warm", "cold"]),
+});
+
+/**
  * @summary Get dashboard statistics
  */
 export const GetDashboardStatsResponse = zod.object({
@@ -299,7 +417,14 @@ export const GetDashboardStatsResponse = zod.object({
  */
 export const GetRecentActivityResponseItem = zod.object({
   id: zod.number(),
-  type: zod.enum(["new_lead", "new_message", "booking", "status_change"]),
+  type: zod.enum([
+    "new_lead",
+    "new_message",
+    "booking",
+    "status_change",
+    "follow_up",
+    "operator_reply",
+  ]),
   description: zod.string(),
   conversationId: zod.number().nullable(),
   leadId: zod.number().nullable(),
@@ -308,3 +433,25 @@ export const GetRecentActivityResponseItem = zod.object({
 export const GetRecentActivityResponse = zod.array(
   GetRecentActivityResponseItem,
 );
+
+/**
+ * @summary Get time-series stats (daily/weekly/monthly)
+ */
+export const GetTimeSeriesQueryParams = zod.object({
+  period: zod.enum(["daily", "weekly", "monthly"]).optional(),
+});
+
+export const GetTimeSeriesResponse = zod.object({
+  period: zod.string(),
+  data: zod.array(
+    zod.object({
+      date: zod.string(),
+      messages: zod.number(),
+      leads: zod.number(),
+      bookings: zod.number(),
+    }),
+  ),
+  totalMessages: zod.number(),
+  totalLeads: zod.number(),
+  totalBookings: zod.number(),
+});

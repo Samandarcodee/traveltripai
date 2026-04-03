@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { desc, eq } from "drizzle-orm";
-import { db, conversationsTable, messagesTable } from "@workspace/db";
+import { db, conversationsTable, messagesTable, activityTable } from "@workspace/db";
 import {
   ListConversationsQueryParams,
   CreateConversationBody,
@@ -8,9 +8,27 @@ import {
   UpdateConversationParams,
   UpdateConversationBody,
   GetConversationMessagesParams,
+  OperatorReplyParams,
+  OperatorReplyBody,
+  SendFollowUpParams,
 } from "@workspace/api-zod";
+import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router: IRouter = Router();
+
+function formatConv(c: typeof conversationsTable.$inferSelect) {
+  return {
+    ...c,
+    operatorMode: c.operatorMode === 1,
+    lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
+    createdAt: c.createdAt.toISOString(),
+    updatedAt: c.updatedAt.toISOString(),
+  };
+}
+
+function formatMsg(m: typeof messagesTable.$inferSelect) {
+  return { ...m, createdAt: m.createdAt.toISOString() };
+}
 
 router.get("/conversations", async (req, res): Promise<void> => {
   const params = ListConversationsQueryParams.safeParse(req.query);
@@ -26,13 +44,7 @@ router.get("/conversations", async (req, res): Promise<void> => {
   }
 
   const conversations = await query.orderBy(desc(conversationsTable.updatedAt));
-
-  res.json(conversations.map((c) => ({
-    ...c,
-    lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
-    createdAt: c.createdAt.toISOString(),
-    updatedAt: c.updatedAt.toISOString(),
-  })));
+  res.json(conversations.map(formatConv));
 });
 
 router.post("/conversations", async (req, res): Promise<void> => {
@@ -43,13 +55,7 @@ router.post("/conversations", async (req, res): Promise<void> => {
   }
 
   const [conversation] = await db.insert(conversationsTable).values(parsed.data).returning();
-
-  res.status(201).json({
-    ...conversation,
-    lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
-    createdAt: conversation.createdAt.toISOString(),
-    updatedAt: conversation.updatedAt.toISOString(),
-  });
+  res.status(201).json(formatConv(conversation));
 });
 
 router.get("/conversations/:id", async (req, res): Promise<void> => {
@@ -70,16 +76,7 @@ router.get("/conversations/:id", async (req, res): Promise<void> => {
     .where(eq(messagesTable.conversationId, params.data.id))
     .orderBy(messagesTable.createdAt);
 
-  res.json({
-    ...conversation,
-    lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
-    createdAt: conversation.createdAt.toISOString(),
-    updatedAt: conversation.updatedAt.toISOString(),
-    messages: messages.map((m) => ({
-      ...m,
-      createdAt: m.createdAt.toISOString(),
-    })),
-  });
+  res.json({ ...formatConv(conversation), messages: messages.map(formatMsg) });
 });
 
 router.patch("/conversations/:id", async (req, res): Promise<void> => {
@@ -95,8 +92,13 @@ router.patch("/conversations/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  const updateData: Record<string, unknown> = { ...body.data };
+  if (body.data.operatorMode !== undefined) {
+    updateData.operatorMode = body.data.operatorMode ? 1 : 0;
+  }
+
   const [conversation] = await db.update(conversationsTable)
-    .set(body.data)
+    .set(updateData)
     .where(eq(conversationsTable.id, params.data.id))
     .returning();
 
@@ -105,12 +107,7 @@ router.patch("/conversations/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json({
-    ...conversation,
-    lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
-    createdAt: conversation.createdAt.toISOString(),
-    updatedAt: conversation.updatedAt.toISOString(),
-  });
+  res.json(formatConv(conversation));
 });
 
 router.get("/conversations/:id/messages", async (req, res): Promise<void> => {
@@ -124,10 +121,100 @@ router.get("/conversations/:id/messages", async (req, res): Promise<void> => {
     .where(eq(messagesTable.conversationId, params.data.id))
     .orderBy(messagesTable.createdAt);
 
-  res.json(messages.map((m) => ({
-    ...m,
-    createdAt: m.createdAt.toISOString(),
-  })));
+  res.json(messages.map(formatMsg));
+});
+
+router.post("/conversations/:id/operator-reply", async (req, res): Promise<void> => {
+  const params = OperatorReplyParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const body = OperatorReplyBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const [conversation] = await db.select().from(conversationsTable)
+    .where(eq(conversationsTable.id, params.data.id));
+  if (!conversation) {
+    res.status(404).json({ error: "Conversation not found" });
+    return;
+  }
+
+  const [message] = await db.insert(messagesTable).values({
+    conversationId: params.data.id,
+    role: "operator",
+    content: body.data.content,
+  }).returning();
+
+  await db.update(conversationsTable)
+    .set({ lastMessage: body.data.content, lastMessageAt: new Date(), operatorMode: 1 })
+    .where(eq(conversationsTable.id, params.data.id));
+
+  await db.insert(activityTable).values({
+    type: "operator_reply",
+    description: `Operator javob berdi: "${body.data.content.slice(0, 60)}${body.data.content.length > 60 ? "..." : ""}"`,
+    conversationId: params.data.id,
+    leadId: conversation.leadId ?? undefined,
+  });
+
+  res.json(formatMsg(message));
+});
+
+router.post("/conversations/:id/follow-up", async (req, res): Promise<void> => {
+  const params = SendFollowUpParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [conversation] = await db.select().from(conversationsTable)
+    .where(eq(conversationsTable.id, params.data.id));
+  if (!conversation) {
+    res.status(404).json({ error: "Conversation not found" });
+    return;
+  }
+
+  const customerName = conversation.customerName ?? "mijoz";
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `Siz OKSTours kompaniyasining AI agentsiz. Mijoz 30 daqiqa javob bermadi. Qisqa, do'stona va professional follow-up xabar yozing. Faqat xabar matnini yozing, boshqa hech narsa qo'shmang.`,
+      },
+      {
+        role: "user",
+        content: `Mijoz ismi: ${customerName}. Kanal: ${conversation.channel}. Follow-up xabar yozing.`,
+      },
+    ],
+    max_tokens: 150,
+  });
+
+  const followUpText = completion.choices[0]?.message?.content ?? "Salom! Biror savol bo'lsa, men shu yerdaman. Yordam berishga tayyorman 😊";
+
+  const [message] = await db.insert(messagesTable).values({
+    conversationId: params.data.id,
+    role: "assistant",
+    content: followUpText,
+  }).returning();
+
+  await db.update(conversationsTable)
+    .set({ lastMessage: followUpText, lastMessageAt: new Date() })
+    .where(eq(conversationsTable.id, params.data.id));
+
+  await db.insert(activityTable).values({
+    type: "follow_up",
+    description: `Follow-up yuborildi: ${conversation.customerName ?? "Noma'lum mijoz"}`,
+    conversationId: params.data.id,
+    leadId: conversation.leadId ?? undefined,
+  });
+
+  res.json(formatMsg(message));
 });
 
 export default router;

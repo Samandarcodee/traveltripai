@@ -15,4 +15,5 @@ export interface UpdateConversationBody {
   customerPhone?: string | null;
   /** @nullable */
   leadId?: number | null;
+  operatorMode?: boolean;
 }
