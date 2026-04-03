@@ -3,13 +3,23 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: OKSTours AI Agent API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: conversations
+    description: Chat conversation management
+  - name: messages
+    description: Chat messages
+  - name: leads
+    description: Lead/customer management
+  - name: chat
+    description: AI chat operations
+  - name: stats
+    description: Statistics and analytics
 paths:
   /healthz:
     get:
@@ -24,6 +34,277 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /conversations:
+    get:
+      operationId: listConversations
+      tags: [conversations]
+      summary: List all conversations
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, closed, pending]
+        - name: channel
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+    post:
+      operationId: createConversation
+      tags: [conversations]
+      summary: Create a new conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversationBody"
+      responses:
+        "201":
+          description: Created conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{id}:
+    get:
+      operationId: getConversation
+      tags: [conversations]
+      summary: Get a conversation by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationWithMessages"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateConversation
+      tags: [conversations]
+      summary: Update a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateConversationBody"
+      responses:
+        "200":
+          description: Updated conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /conversations/{id}/messages:
+    get:
+      operationId: getConversationMessages
+      tags: [messages]
+      summary: Get messages for a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+
+  /chat:
+    post:
+      operationId: sendMessage
+      tags: [chat]
+      summary: Send a message and get AI response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /leads:
+    get:
+      operationId: listLeads
+      tags: [leads]
+      summary: List all leads/customers
+      parameters:
+        - name: segment
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [hot, warm, cold]
+        - name: interest
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lead"
+    post:
+      operationId: createLead
+      tags: [leads]
+      summary: Create a new lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLeadBody"
+      responses:
+        "201":
+          description: Created lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /leads/{id}:
+    get:
+      operationId: getLead
+      tags: [leads]
+      summary: Get a lead by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateLead
+      tags: [leads]
+      summary: Update a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLeadBody"
+      responses:
+        "200":
+          description: Updated lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /stats/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [stats]
+      summary: Get recent activity feed
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +315,334 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        channel:
+          type: string
+          enum: [telegram, whatsapp, instagram, web, sms, email]
+        status:
+          type: string
+          enum: [active, closed, pending]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        leadId:
+          type: ["integer", "null"]
+        lastMessage:
+          type: ["string", "null"]
+        lastMessageAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - channel
+        - status
+        - customerName
+        - customerPhone
+        - leadId
+        - lastMessage
+        - lastMessageAt
+        - createdAt
+        - updatedAt
+
+    ConversationWithMessages:
+      type: object
+      properties:
+        id:
+          type: integer
+        channel:
+          type: string
+          enum: [telegram, whatsapp, instagram, web, sms, email]
+        status:
+          type: string
+          enum: [active, closed, pending]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        leadId:
+          type: ["integer", "null"]
+        lastMessage:
+          type: ["string", "null"]
+        lastMessageAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+      required:
+        - id
+        - channel
+        - status
+        - customerName
+        - customerPhone
+        - leadId
+        - lastMessage
+        - lastMessageAt
+        - createdAt
+        - updatedAt
+        - messages
+
+    CreateConversationBody:
+      type: object
+      properties:
+        channel:
+          type: string
+          enum: [telegram, whatsapp, instagram, web, sms, email]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+      required:
+        - channel
+
+    UpdateConversationBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, closed, pending]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        leadId:
+          type: ["integer", "null"]
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        role:
+          type: string
+          enum: [user, assistant, operator]
+        content:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - conversationId
+        - role
+        - content
+        - createdAt
+
+    SendMessageBody:
+      type: object
+      properties:
+        conversationId:
+          type: ["integer", "null"]
+        message:
+          type: string
+        channel:
+          type: string
+          enum: [telegram, whatsapp, instagram, web, sms, email]
+        customerName:
+          type: ["string", "null"]
+      required:
+        - message
+        - channel
+
+    ChatResponse:
+      type: object
+      properties:
+        conversationId:
+          type: integer
+        message:
+          type: string
+        leadCreated:
+          type: boolean
+      required:
+        - conversationId
+        - message
+        - leadCreated
+
+    Lead:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        segment:
+          type: string
+          enum: [hot, warm, cold]
+        interest:
+          type: ["string", "null"]
+        destination:
+          type: ["string", "null"]
+        budget:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [new, contacted, qualified, booked, lost]
+        notes:
+          type: ["string", "null"]
+        conversationId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - phone
+        - email
+        - segment
+        - interest
+        - destination
+        - budget
+        - status
+        - notes
+        - conversationId
+        - createdAt
+        - updatedAt
+
+    CreateLeadBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        segment:
+          type: string
+          enum: [hot, warm, cold]
+        interest:
+          type: ["string", "null"]
+        destination:
+          type: ["string", "null"]
+        budget:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [new, contacted, qualified, booked, lost]
+        notes:
+          type: ["string", "null"]
+        conversationId:
+          type: ["integer", "null"]
+      required:
+        - segment
+        - status
+
+    UpdateLeadBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        segment:
+          type: string
+          enum: [hot, warm, cold]
+        interest:
+          type: ["string", "null"]
+        destination:
+          type: ["string", "null"]
+        budget:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [new, contacted, qualified, booked, lost]
+        notes:
+          type: ["string", "null"]
+
+    DashboardStats:
+      type: object
+      properties:
+        totalConversations:
+          type: integer
+        activeConversations:
+          type: integer
+        totalLeads:
+          type: integer
+        hotLeads:
+          type: integer
+        warmLeads:
+          type: integer
+        coldLeads:
+          type: integer
+        bookedLeads:
+          type: integer
+        channelBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChannelCount"
+        todayMessages:
+          type: integer
+      required:
+        - totalConversations
+        - activeConversations
+        - totalLeads
+        - hotLeads
+        - warmLeads
+        - coldLeads
+        - bookedLeads
+        - channelBreakdown
+        - todayMessages
+
+    ChannelCount:
+      type: object
+      properties:
+        channel:
+          type: string
+        count:
+          type: integer
+      required:
+        - channel
+        - count
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [new_lead, new_message, booking, status_change]
+        description:
+          type: string
+        conversationId:
+          type: ["integer", "null"]
+        leadId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - type
+        - description
+        - conversationId
+        - leadId
+        - createdAt
