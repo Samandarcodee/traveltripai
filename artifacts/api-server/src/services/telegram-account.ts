@@ -3,10 +3,11 @@ import { StringSession } from "telegram/sessions/index.js";
 import { NewMessage } from "telegram/events/index.js";
 import type { NewMessageEvent } from "telegram/events/NewMessage.js";
 import { Api } from "telegram/tl/index.js";
-import { db, conversationsTable, messagesTable, leadsTable, activityTable, promotionsTable, settingsTable } from "@workspace/db";
+import { db, conversationsTable, messagesTable, leadsTable, activityTable, settingsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import pino from "pino";
+import { buildSalesPrompt } from "../lib/sales-prompt.js";
 
 const logger = pino({ name: "telegram-account" });
 
@@ -33,18 +34,6 @@ async function setSetting(key: string, value: string | null): Promise<void> {
     .onConflictDoUpdate({ target: settingsTable.key, set: { value, updatedAt: new Date() } });
 }
 
-const BASE_SYSTEM_PROMPT = `Siz OKSTours kompaniyasining rasmiy AI Agentsiz.
-Sizning vazifangiz: aviabilet, tur paketlar, mehmonxona, transfer va vizaga oid savollarni qabul qilish, mijozga eng aniq javob berish, sotuvni oshirish.
-Har doim qisqa, aniq va professional javob bering. O'zbek, rus yoki ingliz tilida javob bering (mijoz qaysi tilda yozsa).`;
-
-async function buildSystemPrompt(): Promise<string> {
-  const activePromos = await db.select().from(promotionsTable).where(eq(promotionsTable.active, 1)).limit(10);
-  if (activePromos.length === 0) return BASE_SYSTEM_PROMPT;
-  const promoText = activePromos.map((p) =>
-    `- ${p.title}: ${p.description}${p.discount ? ` (${p.discount})` : ""}${p.destination ? ` [${p.destination}]` : ""}${p.validUntil ? ` — ${p.validUntil} gacha` : ""}`
-  ).join("\n");
-  return `${BASE_SYSTEM_PROMPT}\n\nFAOL AKSIYALAR:\n${promoText}`;
-}
 
 async function handleIncomingMessage(event: NewMessageEvent): Promise<void> {
   if (!activeClient) return;
@@ -118,7 +107,7 @@ async function handleIncomingMessage(event: NewMessageEvent): Promise<void> {
       .where(eq(messagesTable.conversationId, conversation.id))
       .orderBy(messagesTable.createdAt);
 
-    const systemPrompt = await buildSystemPrompt();
+    const systemPrompt = await buildSalesPrompt();
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",

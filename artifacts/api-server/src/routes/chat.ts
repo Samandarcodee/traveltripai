@@ -3,61 +3,187 @@ import { db, conversationsTable, messagesTable, leadsTable, activityTable, promo
 import { eq, desc } from "drizzle-orm";
 import { SendMessageBody } from "@workspace/api-zod";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { logger } from "../lib/logger";
+import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
 
-const BASE_SYSTEM_PROMPT = `Siz OKSTours kompaniyasining rasmiy AI Agentsiz.
-Sizning vazifangiz: aviabilet, tur paketlar, mehmonxona, transfer va vizaga oid savollarni qabul qilish, mijozga eng aniq javob berish, sotuvni oshirish, kompaniya obro'sini ko'tarish, mijoz bilan yoqimli muloqot qilish.
+// ─── SALES MANAGER SYSTEM PROMPT ────────────────────────────────────────────
+const SALES_MANAGER_PROMPT = `Siz OKSTours kompaniyasining professional SOTUV MENEJERI AI agentsiz. Sizning asosiy vazifangiz — har bir mijozni BRON QILISHGACHA olib borish.
 
-SHAXSIYAT:
-- Do'stona, hurmatli, professional.
-- Juda tez tushunadi.
-- Mijoz savollarini tahlil qilib, eng qisqa va tushunarli javob beradi.
-- Kerak bo'lsa qo'shimcha savollar beradi.
-- Savdoni oshiradi (lekin zo'rlab emas).
-- Xatolarga yo'l qo'ymaydi.
-- Faqat tekshirilgan ma'lumot asosida javob beradi.
+=== SHAXSIYAT ===
+Ismingiz: Aziz (OKSTours menejeri)
+Uslub: Do'stona, ishonchli, professional, savdo yo'naltirilgan
+Til: Mijoz qaysi tilda yozsa — o'sha tilda javob bering (O'zbek/Rus/Ingliz)
 
-JAVOB QOIDALARI:
-1) Har javob qisqa, aniq va professional bo'lishi kerak.
-2) Mijoz "aviachipta" yoki "bilet" desa → darhol 3 ta savol ber: Qaysi shahardan? Qaysi shaharga? Qaysi sanaga?
-3) Mijoz "tur paket" yoki "tur" desa → 4 ta savol: Qaysi mamlakat? Qancha kishi? Qachon ketmoqchisiz? Budjet qancha?
-4) Mijoz noaniq yozsa → eng minimal savollar bilan aniqlik kirit.
-5) Har doim alternativ taklif ber.
-6) Qimmat variant bo'lsa → o'rtacha yoki arzon variant bilan solishtir.
-7) Mijoz javob bermasa → "Sizga ma'lumot kerak bo'lsa, men shu yerdaman ❤️" de.
+=== SOTUV FUNNEL (har xabardan keyin qaysi bosqichdasiz aniqlang) ===
+1. DISCOVERY  — mijoz nima xohlayotganini tushunish
+2. QUALIFICATION — yo'nalish, sana, kishilar soni, budjet aniqlashtirish
+3. PROPOSAL — eng mos variant taklif qilish va narx aytish
+4. CLOSING — bron qilishga undash, urgentlik yaratish
+5. CONFIRMATION — bron jarayonini boshlash, aloqa ma'lumotlari olish
 
-SOTUV STRATEGIYASI (yumshoq):
-- Upsell: "Bu yo'nalishda qo'shimcha bagajli variant ham bor."
-- Cross-sell: "Siz uchun aeroport transferi ham bron qilib beray?"
-- Urgent CTA: "Biletlar narxi o'zgarishi mumkin, hozirgi narxni saqlab qo'yaymi?"
-- Mijozni yo'qotmaslik: "Budjetingizni aytsangiz, sizga eng mos variant topib beraman."
+=== MULOQOT QOIDALARI ===
 
-JAVOB FORMATI:
-1) Qisqa salom / javob
-2) Asosiy ma'lumot
-3) Qo'shimcha yordam
-4) Xohlasangiz takliflar
+DISCOVERY bosqichi:
+- "Salom! OKSTours — men Aziz. Sizga qanday yordam bera olaman?"
+- Mijoz yo'nalish aytsa → darhol QUALIFICATION bosqichiga o'ting
 
-Emojini kam ishlating. Har doim o'zbek tilida javob bering agar mijoz o'zbek tilida yozsa. Agar rus tilida yozsa — rus tilida javob bering. Ingliz tilida yozsa — ingliz tilida.`;
+QUALIFICATION (MAJBURIY savollar — birin-ketin bering, birdaniga emas):
+1. Qaysi yo'nalish? (agar aytmagan bo'lsa)
+2. Qachon ketmoqchisiz? (taxminiy sana)
+3. Necha kishi? (kattalar / bolalar)
+4. Budjet qancha? (taxminiy, dollar yoki so'mda)
+→ FAQAT shu 4 ta ma'lumot to'liq bo'lganda narx aytib PROPOSAL ga o'ting
 
-async function buildSystemPrompt(): Promise<string> {
+PROPOSAL:
+- Aniq narx ayt (taxminiy bo'lsa ham)
+- 2-3 ta variant taklif qil (economy/comfort/business)
+- Upsell qil: bagaj, transfer, sug'urta
+- "Hozirgi narx — keyinroq o'zgarishi mumkin" de
+
+CLOSING (bu eng muhim bosqich):
+- Urgentlik: "Bu narx faqat bugunga valid, ertaga oshishi mumkin"
+- Social proof: "Bugun 3 ta mijoz shu yo'nalishni bron qildi"
+- Easy first step: "Bron qilish uchun faqat ismingiz va telefon raqamingiz kerak"
+- Objection handling (quyida)
+
+E'TIROZ ISHLASH TEXNIKASI:
+- "Qimmat" → "Oyiga bo'lib to'lash imkoniyati bor. Yoki [arzonroq sana/variant] ko'ray?"
+- "O'ylab ko'raman" → "Bilaman, bu muhim qaror. Nimasi haqida ko'proq ma'lumot kerak?"
+- "Vaqtim yo'q" → "3 daqiqada bron qilib qo'yaman, keyin rahat o'ylab ko'rar ekanmiz"
+- "Boshqa joydan arzon" → "Qayerda ko'rdingiz? Narx tenglashtiramiz yoki bonuslar qo'shamiz"
+
+ALOQA MA'LUMOTLARI OLISH:
+Mijoz qiziqayotgan bo'lsa → "Aniq narx va mavjudlikni tekshirib berish uchun telefon raqamingizni yozsangiz?"
+Telegram bo'lsa → "Telegram orqali gaplashyapmiz, bron tayyorlagach sizga yozaman"
+
+OPERATOR GA YUBORISH:
+Agar mijoz: murakkab so'rov / shikoyat / maxsus talab bildirsachiqsa yozing: [OPERATOR_KERAK]
+
+=== JAVOB FORMATI ===
+- Qisqa va aniq (2-4 gap)
+- Har xabar oxirida bitta aniq savol YOKI aniq taklif
+- Emojidan kam foydalaning (1-2 ta maksimum)
+- Ro'yxat emas, oddiy muloqot tili
+
+=== TAQIQLANGAN ===
+- "Kechirasiz" (juda ko'p uzr so'ramang)
+- Javobsiz qoldirish
+- Narxni aniqlamasdan aytish
+- "Bilmayman" deyish — har doim alternativ ayting`;
+
+async function buildSystemPrompt(companyName?: string | null, operatorName?: string | null): Promise<string> {
   const activePromos = await db.select().from(promotionsTable).where(eq(promotionsTable.active, 1)).limit(10);
-  if (activePromos.length === 0) return BASE_SYSTEM_PROMPT;
 
-  const promoText = activePromos.map((p) =>
-    `- ${p.title}: ${p.description}${p.discount ? ` (Chegirma: ${p.discount})` : ""}${p.destination ? ` [${p.destination}]` : ""}${p.validUntil ? ` — ${p.validUntil} gacha` : ""}`
-  ).join("\n");
+  let prompt = SALES_MANAGER_PROMPT;
 
-  return `${BASE_SYSTEM_PROMPT}
+  if (companyName || operatorName) {
+    prompt = prompt.replace("OKSTours", companyName ?? "OKSTours");
+  }
 
-FAOL AKSIYALAR VA PROMOLAR:
-${promoText}
+  if (activePromos.length > 0) {
+    const promoText = activePromos.map((p) =>
+      `• ${p.title}: ${p.description}${p.discount ? ` (Chegirma: ${p.discount})` : ""}${p.destination ? ` [${p.destination}]` : ""}${p.validUntil ? ` — ${p.validUntil} gacha` : ""}`
+    ).join("\n");
 
-Mijoz tur yoki chipta haqida so'rasa, tegishli aksiyalarni yumshoq tarzda aytib o'ting.`;
+    prompt += `\n\n=== FAOL AKSIYALAR (mijoz yo'nalish so'raganda yumshoq ayt) ===\n${promoText}`;
+  }
+
+  return prompt;
 }
 
+// ─── LEAD EXTRACTOR (background, non-blocking) ──────────────────────────────
+async function extractAndUpdateLead(
+  conversationId: number,
+  messages: { role: string; content: string }[]
+): Promise<void> {
+  try {
+    const conversationText = messages
+      .slice(-10)
+      .map((m) => `${m.role === "user" ? "Mijoz" : "Agent"}: ${m.content}`)
+      .join("\n");
+
+    const extractionPrompt = `Suhbatdan quyidagi ma'lumotlarni JSON formatda chiqaring. Agar topilmasa — null qo'ying.
+
+Suhbat:
+${conversationText}
+
+Faqat JSON qaytaring, boshqa hech narsa yozmang:
+{
+  "destination": "yo'nalish (shahar/mamlakat) yoki null",
+  "budget": "budjet (raqam va valyuta) yoki null",
+  "departureDate": "jo'nash sanasi yoki null",
+  "passengersCount": "kishilar soni (faqat raqam) yoki null",
+  "interest": "qiziqish turi (aviabilet/tur/mehmonxona/viza) yoki null",
+  "phone": "telefon raqami yoki null",
+  "name": "ism yoki null",
+  "segment": "hot/warm/cold (suhbat intensivligiga qarab) yoki null",
+  "status": "new/contacted/qualified (ma'lumot to'liqligiga qarab) yoki null",
+  "needsOperator": false
+}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: extractionPrompt }],
+      max_tokens: 300,
+      temperature: 0.1,
+    });
+
+    const rawJson = completion.choices[0]?.message?.content ?? "{}";
+    const jsonMatch = rawJson.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return;
+
+    const extracted = JSON.parse(jsonMatch[0]);
+
+    // Find lead for this conversation
+    const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
+    if (!conv?.leadId) return;
+
+    const updateFields: Record<string, any> = {};
+    if (extracted.destination) updateFields.destination = extracted.destination;
+    if (extracted.budget) updateFields.budget = extracted.budget;
+    if (extracted.departureDate) updateFields.departureDate = extracted.departureDate;
+    if (extracted.passengersCount) updateFields.passengersCount = String(extracted.passengersCount);
+    if (extracted.interest) updateFields.interest = extracted.interest;
+    if (extracted.phone) updateFields.phone = extracted.phone;
+    if (extracted.name && extracted.name !== "null") updateFields.name = extracted.name;
+    if (extracted.segment && ["hot", "warm", "cold"].includes(extracted.segment)) {
+      updateFields.segment = extracted.segment;
+    }
+    if (extracted.status && ["new", "contacted", "qualified"].includes(extracted.status)) {
+      updateFields.status = extracted.status;
+    }
+
+    if (Object.keys(updateFields).length > 0) {
+      await db.update(leadsTable).set(updateFields).where(eq(leadsTable.id, conv.leadId));
+    }
+
+    // Update customer name in conversation if extracted
+    if (extracted.name && extracted.name !== "null" && !conv.customerName) {
+      await db.update(conversationsTable)
+        .set({ customerName: extracted.name })
+        .where(eq(conversationsTable.id, conversationId));
+    }
+
+    // If needsOperator flag set — switch conversation to operator mode
+    if (extracted.needsOperator) {
+      await db.update(conversationsTable)
+        .set({ operatorMode: 1 })
+        .where(eq(conversationsTable.id, conversationId));
+
+      await db.insert(activityTable).values({
+        type: "follow_up",
+        description: `AI operator yordami kerak deb belgiladi`,
+        conversationId,
+        leadId: conv.leadId ?? undefined,
+      });
+    }
+  } catch (err) {
+    logger.warn({ err }, "Lead extraction failed (non-critical)");
+  }
+}
+
+// ─── MAIN CHAT ENDPOINT ──────────────────────────────────────────────────────
 router.post("/chat", async (req, res): Promise<void> => {
   const parsed = SendMessageBody.safeParse(req.body);
   if (!parsed.success) {
@@ -69,7 +195,9 @@ router.post("/chat", async (req, res): Promise<void> => {
 
   let conversationId = existingConvId ?? null;
   let leadCreated = false;
+  let leadId: number | null = null;
 
+  // ── Create conversation + lead if new ──
   if (!conversationId) {
     const [newConv] = await db.insert(conversationsTable).values({
       channel,
@@ -86,7 +214,13 @@ router.post("/chat", async (req, res): Promise<void> => {
       status: "new",
       conversationId,
     }).returning();
+    leadId = newLead.id;
     leadCreated = true;
+
+    // Link conversation → lead
+    await db.update(conversationsTable)
+      .set({ leadId: newLead.id })
+      .where(eq(conversationsTable.id, conversationId));
 
     await db.insert(activityTable).values({
       type: "new_lead",
@@ -94,8 +228,13 @@ router.post("/chat", async (req, res): Promise<void> => {
       conversationId,
       leadId: newLead.id,
     });
+  } else {
+    // Get leadId from existing conversation
+    const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
+    leadId = conv?.leadId ?? null;
   }
 
+  // ── Save user message ──
   await db.insert(messagesTable).values({
     conversationId,
     role: "user",
@@ -108,58 +247,95 @@ router.post("/chat", async (req, res): Promise<void> => {
     status: "active",
   }).where(eq(conversationsTable.id, conversationId));
 
+  // ── Fetch conversation history ──
   const history = await db.select().from(messagesTable)
     .where(eq(messagesTable.conversationId, conversationId))
     .orderBy(desc(messagesTable.createdAt))
-    .limit(20);
+    .limit(30);
 
   const systemPrompt = await buildSystemPrompt();
 
+  // Build chat messages — include operator messages as assistant context
   const chatMessages = [
     { role: "system" as const, content: systemPrompt },
     ...history.reverse()
-      .filter((m) => m.role === "user" || m.role === "assistant")
+      .filter((m) => m.role === "user" || m.role === "assistant" || m.role === "operator")
       .map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
+        role: (m.role === "operator" ? "assistant" : m.role) as "user" | "assistant",
+        content: m.role === "operator" ? `[Operator]: ${m.content}` : m.content,
       })),
   ];
 
+  // ── Call AI ──
   let aiResponse = "";
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      max_tokens: 1024,
+      max_tokens: 512,
+      temperature: 0.7,
       messages: chatMessages,
     });
-    aiResponse = completion.choices[0]?.message?.content ?? "Kechirasiz, javob berishda xatolik yuz berdi.";
+    aiResponse = completion.choices[0]?.message?.content ?? "Texnik xatolik yuz berdi. Biroz kutib, qayta yozing.";
   } catch (err) {
     logger.error({ err }, "OpenAI chat error");
-    aiResponse = "Kechirasiz, hozirda texnik xatolik yuz berdi. Iltimos, bir ozdan keyin qayta urinib ko'ring.";
+    aiResponse = "Texnik xatolik yuz berdi. Biroz kutib, qayta yozing.";
   }
 
+  // Clean operator escalation flag from response if present
+  const needsOperator = aiResponse.includes("[OPERATOR_KERAK]");
+  const cleanResponse = aiResponse.replace("[OPERATOR_KERAK]", "").trim();
+
+  // ── Save AI response ──
   await db.insert(messagesTable).values({
     conversationId,
     role: "assistant",
-    content: aiResponse,
+    content: cleanResponse,
   });
 
   await db.update(conversationsTable).set({
-    lastMessage: aiResponse,
+    lastMessage: cleanResponse,
     lastMessageAt: new Date(),
+    ...(needsOperator ? { operatorMode: 0 } : {}),
   }).where(eq(conversationsTable.id, conversationId));
 
   await db.insert(activityTable).values({
     type: "new_message",
-    description: `Yangi xabar (${channel}): ${message.substring(0, 60)}${message.length > 60 ? "..." : ""}`,
+    description: `Yangi xabar (${channel}): "${message.substring(0, 60)}${message.length > 60 ? "..." : ""}"`,
     conversationId,
-    leadId: null,
+    leadId: leadId ?? undefined,
   });
+
+  // ── Handle operator escalation ──
+  if (needsOperator) {
+    await db.update(conversationsTable)
+      .set({ operatorMode: 0 })
+      .where(eq(conversationsTable.id, conversationId));
+
+    if (leadId) {
+      await db.insert(activityTable).values({
+        type: "follow_up",
+        description: `AI operator yordami kerak deb belgiladi`,
+        conversationId,
+        leadId,
+      });
+    }
+  }
+
+  // ── Background: extract lead data from conversation ──
+  const allMessages = await db.select().from(messagesTable)
+    .where(eq(messagesTable.conversationId, conversationId))
+    .orderBy(messagesTable.createdAt);
+
+  // Fire and forget — don't block the response
+  extractAndUpdateLead(conversationId, allMessages).catch((e) =>
+    logger.warn({ e }, "extractAndUpdateLead error")
+  );
 
   res.json({
     conversationId,
-    message: aiResponse,
+    message: cleanResponse,
     leadCreated,
+    needsOperator,
   });
 });
 

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { desc, eq } from "drizzle-orm";
-import { db, conversationsTable, messagesTable, activityTable, settingsTable } from "@workspace/db";
+import { db, conversationsTable, messagesTable, activityTable, settingsTable, leadsTable } from "@workspace/db";
 import {
   ListConversationsQueryParams,
   CreateConversationBody,
@@ -16,12 +16,10 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import * as telegramAccount from "../services/telegram-account.js";
 
 async function sendToTelegram(externalId: string, text: string): Promise<void> {
-  // Try GramJS account first
   if (telegramAccount.isConnected()) {
     const sent = await telegramAccount.sendMessageToUser(externalId, text);
     if (sent) return;
   }
-  // Fall back to bot token
   const [row] = await db.select().from(settingsTable).where(eq(settingsTable.key, "telegram_bot_token"));
   const token = row?.value;
   if (!token) return;
@@ -58,7 +56,6 @@ router.get("/conversations", async (req, res): Promise<void> => {
   }
 
   let query = db.select().from(conversationsTable).$dynamic();
-
   if (params.data.status) {
     query = query.where(eq(conversationsTable.status, params.data.status));
   }
@@ -73,7 +70,6 @@ router.post("/conversations", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-
   const [conversation] = await db.insert(conversationsTable).values(parsed.data).returning();
   res.status(201).json(formatConv(conversation));
 });
@@ -86,7 +82,6 @@ router.get("/conversations/:id", async (req, res): Promise<void> => {
   }
 
   const [conversation] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, params.data.id));
-
   if (!conversation) {
     res.status(404).json({ error: "Conversation not found" });
     return;
@@ -105,7 +100,6 @@ router.patch("/conversations/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-
   const body = UpdateConversationBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -144,13 +138,13 @@ router.get("/conversations/:id/messages", async (req, res): Promise<void> => {
   res.json(messages.map(formatMsg));
 });
 
+// ─── OPERATOR REPLY ──────────────────────────────────────────────────────────
 router.post("/conversations/:id/operator-reply", async (req, res): Promise<void> => {
   const params = OperatorReplyParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
-
   const body = OperatorReplyBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -181,6 +175,16 @@ router.post("/conversations/:id/operator-reply", async (req, res): Promise<void>
     leadId: conversation.leadId ?? undefined,
   });
 
+  // Update lead status to "contacted" when operator replies
+  if (conversation.leadId) {
+    const [lead] = await db.select().from(leadsTable).where(eq(leadsTable.id, conversation.leadId));
+    if (lead && lead.status === "new") {
+      await db.update(leadsTable)
+        .set({ status: "contacted" })
+        .where(eq(leadsTable.id, conversation.leadId));
+    }
+  }
+
   if (conversation.channel === "telegram" && conversation.externalId) {
     await sendToTelegram(conversation.externalId, body.data.content);
   }
@@ -188,6 +192,7 @@ router.post("/conversations/:id/operator-reply", async (req, res): Promise<void>
   res.json(formatMsg(message));
 });
 
+// ─── SMART FOLLOW-UP ─────────────────────────────────────────────────────────
 router.post("/conversations/:id/follow-up", async (req, res): Promise<void> => {
   const params = SendFollowUpParams.safeParse(req.params);
   if (!params.success) {
@@ -202,24 +207,66 @@ router.post("/conversations/:id/follow-up", async (req, res): Promise<void> => {
     return;
   }
 
+  // Get lead info for personalized follow-up
+  let leadContext = "";
+  if (conversation.leadId) {
+    const [lead] = await db.select().from(leadsTable).where(eq(leadsTable.id, conversation.leadId));
+    if (lead) {
+      const parts = [];
+      if (lead.destination) parts.push(`Yo'nalish: ${lead.destination}`);
+      if (lead.budget) parts.push(`Budjet: ${lead.budget}`);
+      if (lead.departureDate) parts.push(`Sana: ${lead.departureDate}`);
+      if (lead.segment) parts.push(`Segment: ${lead.segment}`);
+      if (lead.status) parts.push(`Status: ${lead.status}`);
+      if (parts.length > 0) leadContext = `\nMijoz ma'lumotlari: ${parts.join(", ")}`;
+    }
+  }
+
+  // Get last few messages for context
+  const recentMessages = await db.select().from(messagesTable)
+    .where(eq(messagesTable.conversationId, params.data.id))
+    .orderBy(desc(messagesTable.createdAt))
+    .limit(5);
+
+  const lastContext = recentMessages.reverse().map((m) =>
+    `${m.role === "user" ? "Mijoz" : "Agent"}: ${m.content.slice(0, 100)}`
+  ).join("\n");
+
   const customerName = conversation.customerName ?? "mijoz";
+  const channel = conversation.channel;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
-        content: `Siz OKSTours kompaniyasining AI agentsiz. Mijoz 30 daqiqa javob bermadi. Qisqa, do'stona va professional follow-up xabar yozing. Faqat xabar matnini yozing, boshqa hech narsa qo'shmang.`,
+        content: `Siz OKSTours kompaniyasining sotuv menejeri agentsiz.
+Mijoz javob bermadi (30 daqiqa o'tdi). Ularni qayta qiziqtiradigan qisqa follow-up xabar yozing.
+${leadContext}
+
+QOIDALAR:
+- Qisqa (1-2 gap)
+- Urgentlik yoki qiymat taklif qiling
+- Agar yo'nalish ma'lum bo'lsa — u haqida konkret eslatma qiling
+- Agar narx so'ralgan bo'lsa — "narxlar hali o'zgarmadi" deng
+- Savol bilan tugatadi (javob berishga undash uchun)
+- Mijoz tilida yozing
+
+Suhbat konteksti:
+${lastContext}
+
+FAQAT XABAR MATNINI YOZING, boshqa narsa yozmang.`,
       },
       {
         role: "user",
-        content: `Mijoz ismi: ${customerName}. Kanal: ${conversation.channel}. Follow-up xabar yozing.`,
+        content: `Mijoz: ${customerName}. Kanal: ${channel}. Follow-up yozing.`,
       },
     ],
-    max_tokens: 150,
+    max_tokens: 200,
   });
 
-  const followUpText = completion.choices[0]?.message?.content ?? "Salom! Biror savol bo'lsa, men shu yerdaman. Yordam berishga tayyorman 😊";
+  const followUpText = completion.choices[0]?.message?.content ??
+    `Salom ${customerName}! Savolingiz bormi? Yordam berishga tayyorman 😊`;
 
   const [message] = await db.insert(messagesTable).values({
     conversationId: params.data.id,
@@ -237,6 +284,11 @@ router.post("/conversations/:id/follow-up", async (req, res): Promise<void> => {
     conversationId: params.data.id,
     leadId: conversation.leadId ?? undefined,
   });
+
+  // Send follow-up to Telegram if applicable
+  if (conversation.channel === "telegram" && conversation.externalId) {
+    await sendToTelegram(conversation.externalId, followUpText);
+  }
 
   res.json(formatMsg(message));
 });

@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { db, conversationsTable, messagesTable, settingsTable, promotionsTable } from "@workspace/db";
+import { db, conversationsTable, messagesTable, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import * as telegramAccount from "../services/telegram-account.js";
+import { buildSalesPrompt } from "../lib/sales-prompt.js";
 
 const router: IRouter = Router();
 
@@ -19,18 +20,6 @@ async function sendBotMessage(token: string, chatId: string | number, text: stri
   });
 }
 
-const BASE_SYSTEM_PROMPT = `Siz OKSTours kompaniyasining rasmiy AI Agentsiz.
-Sizning vazifangiz: aviabilet, tur paketlar, mehmonxona, transfer va vizaga oid savollarni qabul qilish, mijozga eng aniq javob berish, sotuvni oshirish.
-Har doim qisqa, aniq va professional javob bering. O'zbek, rus yoki ingliz tilida javob bering (mijoz qaysi tilda yozsa).`;
-
-async function buildSystemPrompt(): Promise<string> {
-  const activePromos = await db.select().from(promotionsTable).where(eq(promotionsTable.active, 1)).limit(10);
-  if (activePromos.length === 0) return BASE_SYSTEM_PROMPT;
-  const promoText = activePromos.map((p) =>
-    `- ${p.title}: ${p.description}${(p as any).discount ? ` (${(p as any).discount})` : ""}${(p as any).destination ? ` [${(p as any).destination}]` : ""}${(p as any).validUntil ? ` — ${(p as any).validUntil} gacha` : ""}`
-  ).join("\n");
-  return `${BASE_SYSTEM_PROMPT}\n\nFAOL AKSIYALAR:\n${promoText}`;
-}
 
 router.post("/telegram/webhook", async (req, res): Promise<void> => {
   res.status(200).json({ ok: true });
@@ -105,7 +94,7 @@ router.post("/telegram/webhook", async (req, res): Promise<void> => {
       .where(eq(_mt.conversationId, conversation.id))
       .orderBy(_mt.createdAt);
 
-    const systemPrompt = await buildSystemPrompt();
+    const systemPrompt = await buildSalesPrompt();
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
