@@ -17,9 +17,9 @@ const segmentColors: Record<string, string> = {
   warm: "bg-amber-100 text-amber-700 border-amber-200",
   cold: "bg-blue-100 text-blue-700 border-blue-200",
 };
-const segmentLabels: Record<string, string> = { hot: "Issiq", warm: "Iliq", cold: "Sovuq" };
+const segmentLabels: Record<string, string> = { hot: "Горячий", warm: "Тёплый", cold: "Холодный" };
 const statusLabels: Record<string, string> = {
-  new: "Yangi", contacted: "Bog'lanildi", qualified: "Malakali", booked: "Bron", lost: "Yo'qoldi",
+  new: "Новый", contacted: "Связались", qualified: "Квалифицирован", booked: "Бронь", lost: "Потерян",
 };
 const statusColors: Record<string, string> = {
   new: "bg-slate-100 text-slate-700",
@@ -67,10 +67,10 @@ export default function Leads() {
           queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
           setCreateOpen(false);
           resetForm();
-          toast({ title: "Yaratildi", description: "Yangi lid muvaffaqiyatli qo'shildi." });
+          toast({ title: "Создано", description: "Новый лид успешно добавлен." });
         },
         onError: () => {
-          toast({ title: "Xatolik", description: "Lid yaratishda xatolik yuz berdi.", variant: "destructive" });
+          toast({ title: "Ошибка", description: "Ошибка при создании лида.", variant: "destructive" });
         },
       }
     );
@@ -90,13 +90,13 @@ export default function Leads() {
     <div className="p-6 md:p-8 max-w-7xl mx-auto flex flex-col h-full space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Lidlar (CRM)</h1>
-          <p className="text-muted-foreground">Potentsial mijozlar va bronlarni boshqarish.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Лиды (CRM)</h1>
+          <p className="text-muted-foreground">Управление потенциальными клиентами и бронированиями.</p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
           <div className="relative flex-1 sm:w-52 min-w-[160px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Qidirish..." className="pl-9 h-9" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Поиск..." className="pl-9 h-9" />
           </div>
           <Select value={segment} onValueChange={setSegment}>
             <SelectTrigger className="w-[140px] h-9">
@@ -104,31 +104,31 @@ export default function Leads() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Barchasi</SelectItem>
-              <SelectItem value="hot">Issiq</SelectItem>
-              <SelectItem value="warm">Iliq</SelectItem>
-              <SelectItem value="cold">Sovuq</SelectItem>
+              <SelectItem value="all">Все</SelectItem>
+              <SelectItem value="hot">Горячий</SelectItem>
+              <SelectItem value="warm">Тёплый</SelectItem>
+              <SelectItem value="cold">Холодный</SelectItem>
             </SelectContent>
           </Select>
           <Button onClick={() => setCreateOpen(true)} className="gap-2 h-9">
-            <Plus className="w-4 h-4" /> Yangi Lid
+            <Plus className="w-4 h-4" /> Новый лид
           </Button>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto">
         {isLoading ? (
-          <div className="p-8 flex justify-center text-muted-foreground animate-pulse">Yuklanmoqda...</div>
+          <div className="p-8 flex justify-center text-muted-foreground animate-pulse">Загрузка...</div>
         ) : filtered.length === 0 ? (
           <div className="p-12 bg-card border rounded-xl flex flex-col items-center justify-center text-center">
             <Users className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
-            <h3 className="text-lg font-medium">Lidlar topilmadi</h3>
+            <h3 className="text-lg font-medium">Лиды не найдены</h3>
             <p className="text-muted-foreground mt-1 text-sm">
-              {search ? "Qidiruv so'zini o'zgartiring." : "Yangi lid qo'shing yoki AI chat orqali kiring."}
+              {search ? "Измените поисковый запрос." : "Добавьте нового лида или войдите через AI чат."}
             </p>
             {!search && (
               <Button onClick={() => setCreateOpen(true)} className="mt-4 gap-2" variant="outline">
-                <Plus className="w-4 h-4" /> Yangi Lid Qo'shish
+                <Plus className="w-4 h-4" /> Добавить лид
               </Button>
             )}
           </div>
@@ -139,7 +139,7 @@ export default function Leads() {
                 <div className="bg-card border hover:border-primary/50 hover:shadow-md transition-all p-5 rounded-xl h-full flex flex-col gap-3">
                   <div className="flex justify-between items-start">
                     <h3 className="font-bold text-base group-hover:text-primary transition-colors line-clamp-1">
-                      {lead.name || "Noma'lum Lid"}
+                      {lead.name || "Неизвестный лид"}
                     </h3>
                     <Badge variant="outline" className={`ml-2 shrink-0 text-xs ${segmentColors[lead.segment] ?? ""}`}>
                       {segmentLabels[lead.segment] ?? lead.segment}
@@ -184,31 +184,30 @@ export default function Leads() {
 
       {!isLoading && filtered.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          Jami {leads?.length ?? 0} lid, {filtered.length} ta ko'rsatilmoqda
+          Всего {leads?.length ?? 0} лидов, показано {filtered.length}
         </p>
       )}
 
-      {/* Create Lead Dialog */}
       <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) resetForm(); }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-primary" />
-              Yangi Lid Qo'shish
+              Добавить новый лид
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium mb-1 block">Ism *</label>
+                <label className="text-sm font-medium mb-1 block">Имя *</label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Ism familiya"
+                  placeholder="Имя фамилия"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Telefon</label>
+                <label className="text-sm font-medium mb-1 block">Телефон</label>
                 <Input
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -229,15 +228,15 @@ export default function Leads() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium mb-1 block">Yo'nalish</label>
+                <label className="text-sm font-medium mb-1 block">Направление</label>
                 <Input
                   value={form.destination}
                   onChange={(e) => setForm({ ...form, destination: e.target.value })}
-                  placeholder="Dubai, Istanbul..."
+                  placeholder="Дубай, Стамбул..."
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Budjet</label>
+                <label className="text-sm font-medium mb-1 block">Бюджет</label>
                 <Input
                   value={form.budget}
                   onChange={(e) => setForm({ ...form, budget: e.target.value })}
@@ -247,54 +246,54 @@ export default function Leads() {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1 block">Qiziqish</label>
+              <label className="text-sm font-medium mb-1 block">Интерес</label>
               <Input
                 value={form.interest}
                 onChange={(e) => setForm({ ...form, interest: e.target.value })}
-                placeholder="Aviabilet, tur, mehmonxona..."
+                placeholder="Авиабилет, тур, отель..."
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium mb-1 block">Segment</label>
+                <label className="text-sm font-medium mb-1 block">Сегмент</label>
                 <Select value={form.segment} onValueChange={(v: any) => setForm({ ...form, segment: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="hot">Issiq</SelectItem>
-                    <SelectItem value="warm">Iliq</SelectItem>
-                    <SelectItem value="cold">Sovuq</SelectItem>
+                    <SelectItem value="hot">Горячий</SelectItem>
+                    <SelectItem value="warm">Тёплый</SelectItem>
+                    <SelectItem value="cold">Холодный</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Status</label>
+                <label className="text-sm font-medium mb-1 block">Статус</label>
                 <Select value={form.status} onValueChange={(v: any) => setForm({ ...form, status: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="new">Yangi</SelectItem>
-                    <SelectItem value="contacted">Bog'lanildi</SelectItem>
-                    <SelectItem value="qualified">Malakali</SelectItem>
-                    <SelectItem value="booked">Bron qilindi</SelectItem>
-                    <SelectItem value="lost">Yo'qoldi</SelectItem>
+                    <SelectItem value="new">Новый</SelectItem>
+                    <SelectItem value="contacted">Связались</SelectItem>
+                    <SelectItem value="qualified">Квалифицирован</SelectItem>
+                    <SelectItem value="booked">Забронировано</SelectItem>
+                    <SelectItem value="lost">Потерян</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1 block">Izoh</label>
+              <label className="text-sm font-medium mb-1 block">Примечание</label>
               <Textarea
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="Qo'shimcha ma'lumotlar..."
+                placeholder="Дополнительная информация..."
                 rows={3}
               />
             </div>
 
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => { setCreateOpen(false); resetForm(); }}>
-                <X className="w-4 h-4 mr-2" /> Bekor
+                <X className="w-4 h-4 mr-2" /> Отмена
               </Button>
               <Button
                 className="flex-1 gap-2"
@@ -302,7 +301,7 @@ export default function Leads() {
                 disabled={!form.name.trim() || createMutation.isPending}
               >
                 <Save className="w-4 h-4" />
-                {createMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+                {createMutation.isPending ? "Сохранение..." : "Сохранить"}
               </Button>
             </div>
           </div>

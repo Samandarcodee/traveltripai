@@ -12,7 +12,7 @@ type LocalMessage = {
 
 export default function Chat() {
   const [messages, setMessages] = useState<LocalMessage[]>([
-    { id: "1", role: "assistant", content: "Hello! I'm the OKSTours AI Assistant. How can I help you plan your trip today?" }
+    { id: "1", role: "assistant", content: "Здравствуйте! Я AI ассистент OKSTours. Как я могу помочь вам спланировать путешествие?" }
   ]);
   const [input, setInput] = useState("");
   const [conversationId, setConversationId] = useState<number | null>(null);
@@ -42,7 +42,7 @@ export default function Chat() {
           message: userMsg.content,
           channel: SendMessageBodyChannel.web,
           conversationId,
-          customerName: "Web Demo User"
+          customerName: "Веб демо пользователь"
         }
       },
       {
@@ -51,7 +51,7 @@ export default function Chat() {
           setMessages(prev => [...prev, { id: Date.now().toString(), role: "assistant", content: data.message }]);
         },
         onError: () => {
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: "assistant", content: "Sorry, I encountered an error connecting to the server." }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: "assistant", content: "Извините, произошла ошибка при подключении к серверу." }]);
         }
       }
     );
@@ -64,8 +64,8 @@ export default function Chat() {
           <Bot className="h-6 w-6 text-primary-foreground" />
         </div>
         <div>
-          <h2 className="font-bold">OKSTours Assistant</h2>
-          <p className="text-xs opacity-80">Live Web Demo</p>
+          <h2 className="font-bold">OKSTours Ассистент</h2>
+          <p className="text-xs opacity-80">Веб демо</p>
         </div>
       </div>
 
@@ -110,7 +110,7 @@ export default function Chat() {
           <Input 
             value={input} 
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message to the AI..." 
+            placeholder="Напишите сообщение AI..." 
             className="flex-1 pr-12 rounded-full bg-muted/50 border-border focus-visible:ring-primary"
             disabled={sendMessageMutation.isPending}
           />

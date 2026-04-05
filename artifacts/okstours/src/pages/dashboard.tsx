@@ -22,7 +22,7 @@ export default function Dashboard() {
   if (statsLoading || activityLoading) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
-        <div className="animate-pulse text-muted-foreground">Yuklanmoqda...</div>
+        <div className="animate-pulse text-muted-foreground">Загрузка...</div>
       </div>
     );
   }
@@ -30,59 +30,59 @@ export default function Dashboard() {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Umumiy Ko'rinish</h1>
-        <p className="text-muted-foreground">Bugungi operatsiyalar bir nazar bilan.</p>
+        <h1 className="text-3xl font-bold tracking-tight">Общий обзор</h1>
+        <p className="text-muted-foreground">Операции за сегодня с первого взгляда.</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Faol Suhbatlar</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Активные диалоги</CardTitle>
             <MessageSquare className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="text-2xl font-bold">{stats?.activeConversations ?? 0}</div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Jami {stats?.totalConversations ?? 0} suhbatdan
+              Из {stats?.totalConversations ?? 0} всего
             </p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Jami Lidlar</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Всего лидов</CardTitle>
             <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="text-2xl font-bold">{stats?.totalLeads ?? 0}</div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {stats?.bookedLeads ?? 0} ta bron qilindi
+              {stats?.bookedLeads ?? 0} забронировано
             </p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Issiq Lidlar</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Горячие лиды</CardTitle>
             <Flame className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="text-2xl font-bold text-red-500">{stats?.hotLeads ?? 0}</div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Darhol e'tibor talab qiladi
+              Требует немедленного внимания
             </p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Bugungi Xabarlar</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Сообщения за сегодня</CardTitle>
             <Activity className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="text-2xl font-bold">{stats?.todayMessages ?? 0}</div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Barcha kanallar bo'yicha
+              По всем каналам
             </p>
           </CardContent>
         </Card>
@@ -91,7 +91,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">So'nggi Faoliyat</CardTitle>
+            <CardTitle className="text-base">Последняя активность</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -108,14 +108,14 @@ export default function Dashboard() {
                   </div>
                   {item.conversationId && (
                     <Link href={`/conversations/${item.conversationId}`}>
-                      <span className="text-xs text-primary hover:underline shrink-0">Ko'rish</span>
+                      <span className="text-xs text-primary hover:underline shrink-0">Открыть</span>
                     </Link>
                   )}
                 </div>
               ))}
               {(!activity || activity.length === 0) && (
                 <div className="text-center py-8 text-muted-foreground text-sm">
-                  Hali faoliyat yo'q
+                  Активности пока нет
                 </div>
               )}
             </div>
@@ -124,7 +124,7 @@ export default function Dashboard() {
 
         <Card className="shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Kanal Taqsimoti</CardTitle>
+            <CardTitle className="text-base">Распределение по каналам</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -147,22 +147,22 @@ export default function Dashboard() {
               ))}
               {(!stats?.channelBreakdown || stats.channelBreakdown.length === 0) && (
                 <div className="text-center py-8 text-muted-foreground text-sm">
-                  Kanal ma'lumotlari yo'q
+                  Нет данных по каналам
                 </div>
               )}
             </div>
 
             <div className="mt-6 pt-4 border-t space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Iliq lidlar</span>
+                <span>Тёплые лиды</span>
                 <span className="font-semibold text-orange-500">{stats?.warmLeads ?? 0}</span>
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Sovuq lidlar</span>
+                <span>Холодные лиды</span>
                 <span className="font-semibold text-blue-500">{stats?.coldLeads ?? 0}</span>
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Bron qilingan</span>
+                <span>Забронировано</span>
                 <span className="font-semibold text-green-500">{stats?.bookedLeads ?? 0}</span>
               </div>
             </div>

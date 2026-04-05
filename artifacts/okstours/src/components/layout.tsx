@@ -18,16 +18,16 @@ import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/chat", label: "AI Chat Demo", icon: MessageSquare },
-  { href: "/conversations", label: "Suhbatlar", icon: Users },
-  { href: "/pipeline", label: "Voronka (Pipeline)", icon: Kanban },
-  { href: "/leads", label: "Lidlar (CRM)", icon: Briefcase },
-  { href: "/promotions", label: "Promo / Aksiyalar", icon: Tag },
-  { href: "/templates", label: "Shablonlar", icon: FileText },
-  { href: "/stats", label: "Statistika", icon: BarChart3 },
-  { href: "/call-analysis", label: "Qo'ng'iroq Tahlili", icon: PhoneCall },
-  { href: "/settings", label: "Sozlamalar", icon: Settings2 },
+  { href: "/", label: "Дашборд", icon: LayoutDashboard },
+  { href: "/chat", label: "AI Чат Демо", icon: MessageSquare },
+  { href: "/conversations", label: "Диалоги", icon: Users },
+  { href: "/pipeline", label: "Воронка (Pipeline)", icon: Kanban },
+  { href: "/leads", label: "Лиды (CRM)", icon: Briefcase },
+  { href: "/promotions", label: "Промо / Акции", icon: Tag },
+  { href: "/templates", label: "Шаблоны", icon: FileText },
+  { href: "/stats", label: "Статистика", icon: BarChart3 },
+  { href: "/call-analysis", label: "Анализ звонков", icon: PhoneCall },
+  { href: "/settings", label: "Настройки", icon: Settings2 },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -70,20 +70,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] flex w-full bg-background">
-      {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-sidebar border-r border-sidebar-border">
         <NavLinks />
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card">
           <h1 className="text-lg font-bold text-primary">OKSTours</h1>
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle navigation</span>
+                <span className="sr-only">Меню</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0 bg-sidebar border-r-0">

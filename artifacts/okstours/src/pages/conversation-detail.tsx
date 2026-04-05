@@ -27,6 +27,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const statusLabels: Record<string, string> = {
+  active: "Активный",
+  pending: "Ожидание",
+  closed: "Закрыт",
+};
+
 export default function ConversationDetail() {
   const params = useParams();
   const id = Number(params.id);
@@ -75,10 +81,10 @@ export default function ConversationDetail() {
             old ? { ...old, operatorMode: data.operatorMode } : old
           );
           toast({
-            title: newMode ? "Operator rejimi yoqildi" : "AI rejimi yoqildi",
+            title: newMode ? "Режим оператора включён" : "Режим AI включён",
             description: newMode
-              ? "Endi siz mijozga o'zingiz javob berasiz."
-              : "AI agent yana avtomatik javob beradi.",
+              ? "Теперь вы отвечаете клиенту вручную."
+              : "AI агент снова отвечает автоматически.",
           });
         },
       }
@@ -101,7 +107,7 @@ export default function ConversationDetail() {
           queryClient.invalidateQueries({ queryKey: [`/api/conversations/${id}`] });
         },
         onError: () => {
-          toast({ title: "Xatolik", description: "Xabar yuborishda xatolik.", variant: "destructive" });
+          toast({ title: "Ошибка", description: "Ошибка при отправке сообщения.", variant: "destructive" });
         },
       }
     );
@@ -117,10 +123,10 @@ export default function ConversationDetail() {
             (old: any[]) => old ? [...old, newMsg] : [newMsg]
           );
           queryClient.invalidateQueries({ queryKey: [`/api/conversations/${id}`] });
-          toast({ title: "Follow-up yuborildi", description: "AI agent follow-up xabarini yubordi." });
+          toast({ title: "Follow-up отправлен", description: "AI агент отправил follow-up сообщение." });
         },
         onError: () => {
-          toast({ title: "Xatolik", description: "Follow-up yuborishda xatolik.", variant: "destructive" });
+          toast({ title: "Ошибка", description: "Ошибка при отправке follow-up.", variant: "destructive" });
         },
       }
     );
@@ -130,12 +136,11 @@ export default function ConversationDetail() {
     setOperatorInput(content);
   };
 
-  if (convLoading || msgsLoading) return <div className="p-8 text-center animate-pulse">Yuklanmoqda...</div>;
-  if (!conversation) return <div className="p-8 text-center">Suhbat topilmadi</div>;
+  if (convLoading || msgsLoading) return <div className="p-8 text-center animate-pulse">Загрузка...</div>;
+  if (!conversation) return <div className="p-8 text-center">Диалог не найден</div>;
 
   const isOperatorMode = conversation.operatorMode;
 
-  // Group templates by category
   const templatesByCategory: Record<string, typeof templates> = {};
   (templates ?? []).forEach((t) => {
     if (!templatesByCategory[t.category]) templatesByCategory[t.category] = [];
@@ -143,13 +148,13 @@ export default function ConversationDetail() {
   });
 
   const categoryLabels: Record<string, string> = {
-    general: "Umumiy",
-    greeting: "Salomlashish",
-    ticket: "Aviabilet",
-    hotel: "Mehmonxona",
-    tour: "Tur",
-    visa: "Viza",
-    payment: "To'lov",
+    general: "Общие",
+    greeting: "Приветствие",
+    ticket: "Авиабилет",
+    hotel: "Отель",
+    tour: "Тур",
+    visa: "Виза",
+    payment: "Оплата",
   };
 
   return (
@@ -167,21 +172,21 @@ export default function ConversationDetail() {
             </div>
             <div>
               <h1 className="font-bold text-base leading-tight flex items-center gap-2">
-                {conversation.customerName || conversation.customerPhone || "Noma'lum"}
+                {conversation.customerName || conversation.customerPhone || "Неизвестный"}
                 <Badge
                   variant={conversation.status === "active" ? "default" : conversation.status === "pending" ? "secondary" : "outline"}
                   className="capitalize h-5 text-[10px]"
                 >
-                  {conversation.status}
+                  {statusLabels[conversation.status] ?? conversation.status}
                 </Badge>
                 {isOperatorMode && (
                   <Badge variant="secondary" className="h-5 text-[10px] gap-1 bg-amber-100 text-amber-700 border-amber-200">
                     <Headset className="h-2.5 w-2.5" />
-                    Operator rejimi
+                    Режим оператора
                   </Badge>
                 )}
               </h1>
-              <p className="text-xs text-muted-foreground capitalize">Via {conversation.channel}</p>
+              <p className="text-xs text-muted-foreground capitalize">Через {conversation.channel}</p>
             </div>
           </div>
         </div>
@@ -189,7 +194,7 @@ export default function ConversationDetail() {
         <div className="flex items-center gap-2">
           {conversation.leadId && (
             <Link href={`/leads/${conversation.leadId}`}>
-              <Button variant="outline" size="sm" className="text-xs h-8">Lidni ko'rish</Button>
+              <Button variant="outline" size="sm" className="text-xs h-8">Открыть лид</Button>
             </Link>
           )}
 
@@ -203,10 +208,10 @@ export default function ConversationDetail() {
                 disabled={updateMutation.isPending}
               >
                 {isOperatorMode ? <Shield className="w-3 h-3" /> : <Headset className="w-3 h-3" />}
-                {isOperatorMode ? "AI ga qaytarish" : "Operator rejimi"}
+                {isOperatorMode ? "Вернуть AI" : "Режим оператора"}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{isOperatorMode ? "AI agent yana javob bersin" : "Siz o'zingiz javob bering"}</TooltipContent>
+            <TooltipContent>{isOperatorMode ? "AI агент снова будет отвечать" : "Отвечайте сами"}</TooltipContent>
           </Tooltip>
 
           {conversation.status !== "closed" && (
@@ -223,7 +228,7 @@ export default function ConversationDetail() {
                   {followUpMutation.isPending ? "..." : "Follow-up"}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>AI follow-up xabar yuboradi</TooltipContent>
+              <TooltipContent>AI отправит follow-up сообщение</TooltipContent>
             </Tooltip>
           )}
 
@@ -236,7 +241,7 @@ export default function ConversationDetail() {
               disabled={updateMutation.isPending}
             >
               <CheckCircle className="w-3 h-3 mr-1.5" />
-              Yopish
+              Закрыть
             </Button>
           )}
         </div>
@@ -246,7 +251,7 @@ export default function ConversationDetail() {
         <div className="max-w-3xl mx-auto space-y-5">
           <div className="text-center">
             <Badge variant="outline" className="bg-background text-xs">
-              Suhbat boshlangan: {format(new Date(conversation.createdAt), "MMMM d, yyyy")}
+              Диалог начат: {format(new Date(conversation.createdAt), "MMMM d, yyyy")}
             </Badge>
           </div>
 
@@ -267,7 +272,7 @@ export default function ConversationDetail() {
                   </div>
                   <div>
                     {isOperatorMsg && (
-                      <p className="text-[10px] text-amber-600 font-semibold mb-1 ml-1">Operator</p>
+                      <p className="text-[10px] text-amber-600 font-semibold mb-1 ml-1">Оператор</p>
                     )}
                     <div
                       className={`p-3.5 rounded-2xl ${
@@ -296,25 +301,24 @@ export default function ConversationDetail() {
             <div className="max-w-3xl mx-auto mb-2">
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Shield className="h-3 w-3 text-blue-500" />
-                AI agent avtomatik javob bermoqda. Yuborsangiz, operator rejimi yonadi.
+                AI агент отвечает автоматически. При отправке включится режим оператора.
               </p>
             </div>
           )}
           <div className="max-w-3xl mx-auto space-y-2">
-            {/* Template picker row */}
             <div className="flex items-center gap-2">
               <FileText className={`h-3.5 w-3.5 shrink-0 ${isOperatorMode ? "text-amber-600" : "text-muted-foreground"}`} />
-              <span className={`text-xs font-medium mr-1 ${isOperatorMode ? "text-amber-700" : "text-muted-foreground"}`}>Shablonlar:</span>
+              <span className={`text-xs font-medium mr-1 ${isOperatorMode ? "text-amber-700" : "text-muted-foreground"}`}>Шаблоны:</span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-amber-300 bg-white hover:bg-amber-50">
-                    Shablon tanlang <ChevronDown className="h-3 w-3" />
+                    Выбрать шаблон <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-72 max-h-80 overflow-y-auto">
                   {Object.keys(templatesByCategory).length === 0 ? (
                     <div className="p-3 text-xs text-muted-foreground text-center">
-                      Shablonlar yo'q. Sozlamalarda qo'shing.
+                      Шаблонов нет. Добавьте в настройках.
                     </div>
                   ) : (
                     Object.entries(templatesByCategory).map(([cat, items], i) => (
@@ -340,13 +344,13 @@ export default function ConversationDetail() {
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <span className="text-[11px] text-amber-600/70 ml-1">Shablonni tanlasangiz, matn maydonga joylashadi</span>
+              <span className="text-[11px] text-amber-600/70 ml-1">Выберите шаблон — текст вставится в поле</span>
             </div>
 
             <form onSubmit={handleOperatorSend} className="flex gap-2">
               <div className="flex items-center gap-2 mr-2 shrink-0">
                 <Headset className="h-4 w-4 text-amber-600" />
-                <span className="text-xs font-medium text-amber-700">Operator</span>
+                <span className="text-xs font-medium text-amber-700">Оператор</span>
               </div>
               <Textarea
                 value={operatorInput}
@@ -357,7 +361,7 @@ export default function ConversationDetail() {
                     handleOperatorSend(e);
                   }
                 }}
-                placeholder="Mijozga xabar yozing... (Shift+Enter - yangi qator)"
+                placeholder="Напишите сообщение клиенту... (Shift+Enter — новая строка)"
                 className={`flex-1 bg-white min-h-[70px] max-h-[140px] text-sm resize-none ${isOperatorMode ? "border-amber-200 focus-visible:ring-amber-400" : ""}`}
                 disabled={operatorReplyMutation.isPending}
                 rows={2}
@@ -381,7 +385,7 @@ export default function ConversationDetail() {
 
       {conversation.status === "closed" && (
         <div className="p-3 bg-muted text-center border-t text-sm text-muted-foreground">
-          Bu suhbat yopilgan.
+          Этот диалог закрыт.
         </div>
       )}
     </div>

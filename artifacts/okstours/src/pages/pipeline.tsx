@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { uz } from "date-fns/locale";
+import { ru } from "date-fns/locale";
 
 type Lead = {
   id: number;
@@ -49,40 +49,40 @@ type Column = {
 const COLUMNS: Column[] = [
   {
     id: "new",
-    label: "YANGI LIDLAR",
-    sublabel: "Ishga tushirildi",
+    label: "НОВЫЕ ЛИДЫ",
+    sublabel: "Только поступили",
     color: "border-blue-400",
     headerBg: "bg-blue-500",
     dotColor: "bg-blue-400",
   },
   {
     id: "contacted",
-    label: "BOG'LANILDI",
-    sublabel: "Aloqa o'rnatildi",
+    label: "СВЯЗАЛИСЬ",
+    sublabel: "Контакт установлен",
     color: "border-amber-400",
     headerBg: "bg-amber-500",
     dotColor: "bg-amber-400",
   },
   {
     id: "qualified",
-    label: "JAVOB KUTILMOQDA",
-    sublabel: "Ikkinchi kasatma",
+    label: "ОЖИДАНИЕ ОТВЕТА",
+    sublabel: "Второй контакт",
     color: "border-purple-400",
     headerBg: "bg-purple-500",
     dotColor: "bg-purple-400",
   },
   {
     id: "booked",
-    label: "BRON QILINDI",
-    sublabel: "Tasdiqlangan",
+    label: "ЗАБРОНИРОВАНО",
+    sublabel: "Подтверждён",
     color: "border-green-400",
     headerBg: "bg-green-500",
     dotColor: "bg-green-400",
   },
   {
     id: "lost",
-    label: "YO'QOTILDI",
-    sublabel: "Qaytarish kerak",
+    label: "ПОТЕРЯНО",
+    sublabel: "Нужно вернуть",
     color: "border-red-400",
     headerBg: "bg-red-500",
     dotColor: "bg-red-400",
@@ -90,9 +90,9 @@ const COLUMNS: Column[] = [
 ];
 
 const SEGMENT_CONFIG = {
-  hot: { icon: Flame, label: "Issiq", class: "text-red-500", badgeClass: "bg-red-50 text-red-600 border-red-200" },
-  warm: { icon: Thermometer, label: "Iliq", class: "text-amber-500", badgeClass: "bg-amber-50 text-amber-600 border-amber-200" },
-  cold: { icon: Snowflake, label: "Sovuq", class: "text-blue-400", badgeClass: "bg-blue-50 text-blue-600 border-blue-200" },
+  hot: { icon: Flame, label: "Горячий", class: "text-red-500", badgeClass: "bg-red-50 text-red-600 border-red-200" },
+  warm: { icon: Thermometer, label: "Тёплый", class: "text-amber-500", badgeClass: "bg-amber-50 text-amber-600 border-amber-200" },
+  cold: { icon: Snowflake, label: "Холодный", class: "text-blue-400", badgeClass: "bg-blue-50 text-blue-600 border-blue-200" },
 };
 
 function LeadCard({
@@ -124,7 +124,7 @@ function LeadCard({
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-sm text-foreground truncate">
-            {lead.name || "Noma'lum"}
+            {lead.name || "Неизвестный"}
           </p>
           {lead.phone && (
             <div className="flex items-center gap-1 mt-0.5">
@@ -158,18 +158,18 @@ function LeadCard({
       <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border/60">
         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
           <Calendar className="h-3 w-3" />
-          {format(new Date(lead.createdAt), "d MMM", { locale: uz })}
+          {format(new Date(lead.createdAt), "d MMM", { locale: ru })}
         </div>
         <div className="flex items-center gap-1.5">
           {lead.conversationId && (
             <Link href={`/conversations/${lead.conversationId}`}>
               <button
                 className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors text-[10px] font-medium"
-                title="Suhbatni ochish"
+                title="Открыть чат"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MessageSquare className="h-3 w-3" />
-                Chat
+                Чат
               </button>
             </Link>
           )}
@@ -265,12 +265,11 @@ export default function Pipeline() {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Top Bar */}
       <div className="shrink-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">VORONKA — Sohalar</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Jami {totalLeads} lid • Sudrab-tashla orqali statusni o'zgartiring</p>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">ВОРОНКА — Отделы</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Всего {totalLeads} лидов • Перетащите для изменения статуса</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -279,23 +278,22 @@ export default function Pipeline() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Qidirish..."
+              placeholder="Поиск..."
               className="pl-9 w-64 h-9 bg-muted/50 border-border text-sm"
             />
           </div>
           <Link href="/leads">
             <Button size="sm" className="gap-2 h-9">
               <Plus className="h-4 w-4" />
-              Yangi Lid
+              Новый лид
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Kanban Board */}
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
-          <div className="animate-pulse text-muted-foreground">Yuklanmoqda...</div>
+          <div className="animate-pulse text-muted-foreground">Загрузка...</div>
         </div>
       ) : (
         <div className="flex-1 overflow-x-auto overflow-y-hidden">
@@ -312,7 +310,6 @@ export default function Pipeline() {
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, col.id)}
                 >
-                  {/* Column Header */}
                   <div className={`shrink-0 px-4 py-3.5 border-b-2 ${col.color} bg-card`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -328,7 +325,6 @@ export default function Pipeline() {
                     <p className="text-[10px] text-muted-foreground mt-1 ml-4">{col.sublabel}</p>
                   </div>
 
-                  {/* Drop Zone */}
                   <div
                     className={`flex-1 overflow-y-auto p-3 space-y-2.5 transition-colors duration-150 ${
                       isOver
@@ -343,7 +339,7 @@ export default function Pipeline() {
                         }`}
                       >
                         <p className="text-xs text-muted-foreground/60">
-                          {isOver ? "Shu yerga tashlang" : "Bo'sh"}
+                          {isOver ? "Перетащите сюда" : "Пусто"}
                         </p>
                       </div>
                     )}
@@ -360,23 +356,22 @@ export default function Pipeline() {
 
                     {colLeads.length > 0 && isOver && (
                       <div className="h-16 flex items-center justify-center border-2 border-dashed border-primary/50 rounded-xl bg-primary/5">
-                        <p className="text-xs text-primary/70">Shu yerga tashlang</p>
+                        <p className="text-xs text-primary/70">Перетащите сюда</p>
                       </div>
                     )}
                   </div>
 
-                  {/* Column Footer */}
                   <div className="shrink-0 px-4 py-2 border-t border-border bg-card/50">
                     <p className="text-[10px] text-muted-foreground text-center">
                       {colLeads.reduce((sum, l) => {
                         const b = l.budget?.replace(/[^0-9]/g, "");
                         return sum + (b ? parseInt(b) : 0);
                       }, 0) > 0
-                        ? `Jami: $${colLeads.reduce((sum, l) => {
+                        ? `Итого: $${colLeads.reduce((sum, l) => {
                             const b = l.budget?.replace(/[^0-9]/g, "");
                             return sum + (b ? parseInt(b) : 0);
                           }, 0).toLocaleString()}`
-                        : `${colLeads.length} ta lid`}
+                        : `${colLeads.length} лидов`}
                     </p>
                   </div>
                 </div>

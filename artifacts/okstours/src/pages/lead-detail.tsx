@@ -28,11 +28,11 @@ const segmentColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  new: "Yangi",
-  contacted: "Bog'lanildi",
-  qualified: "Malakali",
-  booked: "Bron qilindi",
-  lost: "Yo'qoldi",
+  new: "Новый",
+  contacted: "Связались",
+  qualified: "Квалифицирован",
+  booked: "Забронировано",
+  lost: "Потерян",
 };
 
 type FieldRowProps = {
@@ -91,7 +91,7 @@ export default function LeadDetail() {
           refetchTasks();
           setTaskForm({ title: "", description: "", dueDate: "", priority: "medium" });
           setAddingTask(false);
-          toast({ title: "Vazifa yaratildi" });
+          toast({ title: "Задача создана" });
         },
       }
     );
@@ -156,10 +156,10 @@ export default function LeadDetail() {
         onSuccess: (data) => {
           queryClient.setQueryData([`/api/leads/${id}`], data);
           setIsEditing(false);
-          toast({ title: "Saqlandi", description: "Lid muvaffaqiyatli yangilandi." });
+          toast({ title: "Сохранено", description: "Лид успешно обновлён." });
         },
         onError: () => {
-          toast({ title: "Xatolik", description: "Saqlashda xatolik yuz berdi.", variant: "destructive" });
+          toast({ title: "Ошибка", description: "Ошибка при сохранении.", variant: "destructive" });
         },
       }
     );
@@ -173,36 +173,35 @@ export default function LeadDetail() {
           queryClient.setQueryData([`/api/leads/${id}`], data);
           setBookOpen(false);
           toast({
-            title: "Bron tasdiqlandi!",
-            description: `${lead?.name ?? "Mijoz"} broni muvaffaqiyatli tasdiqlandi.`,
+            title: "Бронь подтверждена!",
+            description: `Бронь ${lead?.name ?? "Клиент"} успешно подтверждена.`,
           });
         },
         onError: () => {
-          toast({ title: "Xatolik", description: "Bron tasdiqlashda xatolik.", variant: "destructive" });
+          toast({ title: "Ошибка", description: "Ошибка при подтверждении брони.", variant: "destructive" });
         },
       }
     );
   };
 
-  if (isLoading) return <div className="p-8 text-center animate-pulse">Yuklanmoqda...</div>;
-  if (!lead) return <div className="p-8 text-center">Lid topilmadi</div>;
+  if (isLoading) return <div className="p-8 text-center animate-pulse">Загрузка...</div>;
+  if (!lead) return <div className="p-8 text-center">Лид не найден</div>;
 
   const f = formData;
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-5">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <Link href="/leads">
           <Button variant="ghost" size="sm" className="-ml-3 text-muted-foreground">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Lidlarga qaytish
+            <ArrowLeft className="w-4 h-4 mr-2" /> Назад к лидам
           </Button>
         </Link>
         <div className="flex items-center gap-2">
           {lead.conversationId && (
             <Link href={`/conversations/${lead.conversationId}`}>
               <Button variant="outline" size="sm" className="text-xs gap-1.5">
-                <MessageSquare className="w-3.5 h-3.5" /> Suhbat
+                <MessageSquare className="w-3.5 h-3.5" /> Чат
               </Button>
             </Link>
           )}
@@ -210,35 +209,35 @@ export default function LeadDetail() {
             <Dialog open={bookOpen} onOpenChange={setBookOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white text-xs">
-                  <Plane className="w-3.5 h-3.5" /> Bron Tasdiqlash
+                  <Plane className="w-3.5 h-3.5" /> Подтвердить бронь
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Bronni Tasdiqlash</DialogTitle>
+                  <DialogTitle>Подтверждение брони</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 mt-2">
                   <p className="text-sm text-muted-foreground">
-                    <strong>{lead.name ?? "Mijoz"}</strong> bronini tasdiqlaganingizda, AI agent avtomatik ravishda tasdiqlash xabarini yuboradi.
+                    При подтверждении брони <strong>{lead.name ?? "Клиент"}</strong>, AI агент автоматически отправит подтверждение.
                   </p>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Sayohat sanasi (ixtiyoriy)</label>
+                    <label className="text-sm font-medium mb-1 block">Дата поездки (необязательно)</label>
                     <Input type="date" value={travelDate} onChange={(e) => setTravelDate(e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Izoh (ixtiyoriy)</label>
+                    <label className="text-sm font-medium mb-1 block">Примечание (необязательно)</label>
                     <Textarea
                       value={bookNotes}
                       onChange={(e) => setBookNotes(e.target.value)}
-                      placeholder="Reys raqami, mehmonxona..."
+                      placeholder="Номер рейса, отель..."
                       rows={3}
                     />
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" className="flex-1" onClick={() => setBookOpen(false)}>Bekor qilish</Button>
+                    <Button variant="outline" className="flex-1" onClick={() => setBookOpen(false)}>Отмена</Button>
                     <Button className="flex-1 bg-green-600 hover:bg-green-700 gap-2" onClick={handleBook} disabled={bookMutation.isPending}>
                       <CheckCircle2 className="w-4 h-4" />
-                      {bookMutation.isPending ? "..." : "Tasdiqlash"}
+                      {bookMutation.isPending ? "..." : "Подтвердить"}
                     </Button>
                   </div>
                 </div>
@@ -248,28 +247,27 @@ export default function LeadDetail() {
           {isEditing ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="text-xs gap-1">
-                <X className="w-3 h-3" /> Bekor
+                <X className="w-3 h-3" /> Отмена
               </Button>
               <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending} className="text-xs gap-1">
                 <Save className="w-3.5 h-3.5" />
-                {updateMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+                {updateMutation.isPending ? "Сохранение..." : "Сохранить"}
               </Button>
             </>
           ) : (
             <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="text-xs gap-1">
-              <Edit3 className="w-3.5 h-3.5" /> Tahrirlash
+              <Edit3 className="w-3.5 h-3.5" /> Редактировать
             </Button>
           )}
         </div>
       </div>
 
-      {/* Title & Status */}
       <div>
         <h1 className="text-2xl font-bold mb-2">
           {isEditing ? (
             <Input value={f.name} onChange={(e) => setField("name", e.target.value)} className="text-xl font-bold h-10 max-w-xs" />
           ) : (
-            lead.name || "Noma'lum Lid"
+            lead.name || "Неизвестный лид"
           )}
         </h1>
         <div className="flex flex-wrap gap-2 items-center">
@@ -277,11 +275,11 @@ export default function LeadDetail() {
             <Select value={f.status} onValueChange={(v) => setField("status", v)}>
               <SelectTrigger className="w-[140px] h-7 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="new">Yangi</SelectItem>
-                <SelectItem value="contacted">Bog'lanildi</SelectItem>
-                <SelectItem value="qualified">Malakali</SelectItem>
-                <SelectItem value="booked">Bron qilindi</SelectItem>
-                <SelectItem value="lost">Yo'qoldi</SelectItem>
+                <SelectItem value="new">Новый</SelectItem>
+                <SelectItem value="contacted">Связались</SelectItem>
+                <SelectItem value="qualified">Квалифицирован</SelectItem>
+                <SelectItem value="booked">Забронировано</SelectItem>
+                <SelectItem value="lost">Потерян</SelectItem>
               </SelectContent>
             </Select>
           ) : (
@@ -293,29 +291,29 @@ export default function LeadDetail() {
             <Select value={f.segment} onValueChange={(v) => setField("segment", v)}>
               <SelectTrigger className="w-[110px] h-7 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="hot">Issiq</SelectItem>
-                <SelectItem value="warm">Iliq</SelectItem>
-                <SelectItem value="cold">Sovuq</SelectItem>
+                <SelectItem value="hot">Горячий</SelectItem>
+                <SelectItem value="warm">Тёплый</SelectItem>
+                <SelectItem value="cold">Холодный</SelectItem>
               </SelectContent>
             </Select>
           ) : (
             <Badge variant="outline" className={`${segmentColors[lead.segment] ?? ""}`}>
-              {lead.segment === "hot" ? "Issiq" : lead.segment === "warm" ? "Iliq" : "Sovuq"}
+              {lead.segment === "hot" ? "Горячий" : lead.segment === "warm" ? "Тёплый" : "Холодный"}
             </Badge>
           )}
           <span className="text-xs text-muted-foreground">
-            {format(new Date(lead.createdAt), "d MMM yyyy")} da qo'shilgan
+            Добавлен {format(new Date(lead.createdAt), "d MMM yyyy")}
           </span>
         </div>
       </div>
 
       <Tabs defaultValue="main" className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="main">Asosiy</TabsTrigger>
-          <TabsTrigger value="flight">Aviabilet</TabsTrigger>
-          <TabsTrigger value="contact">Aloqa</TabsTrigger>
+          <TabsTrigger value="main">Основное</TabsTrigger>
+          <TabsTrigger value="flight">Авиабилет</TabsTrigger>
+          <TabsTrigger value="contact">Контакт</TabsTrigger>
           <TabsTrigger value="tasks" className="gap-1.5">
-            Vazifalar
+            Задачи
             {tasks && tasks.filter(t => t.status === "open").length > 0 && (
               <span className="ml-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                 {tasks.filter(t => t.status === "open").length}
@@ -324,64 +322,63 @@ export default function LeadDetail() {
           </TabsTrigger>
         </TabsList>
 
-        {/* --- MAIN TAB --- */}
         <TabsContent value="main" className="mt-0 space-y-4">
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Sayohat Ma'lumotlari</CardTitle>
+              <CardTitle className="text-base">Данные о путешествии</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
               <FieldRow
                 icon={<MapPin className="w-3 h-3" />}
-                label="Yo'nalish"
+                label="Направление"
                 value={lead.destination}
                 editing={isEditing}
-                editEl={<Input value={f.destination} onChange={(e) => setField("destination", e.target.value)} className="h-8 text-sm" placeholder="Dubai, Turkiya..." />}
+                editEl={<Input value={f.destination} onChange={(e) => setField("destination", e.target.value)} className="h-8 text-sm" placeholder="Дубай, Турция..." />}
               />
               <FieldRow
                 icon={<DollarSign className="w-3 h-3" />}
-                label="Budjet"
+                label="Бюджет"
                 value={lead.budget}
                 editing={isEditing}
                 editEl={<Input value={f.budget} onChange={(e) => setField("budget", e.target.value)} className="h-8 text-sm" placeholder="$1000" />}
               />
               <FieldRow
                 icon={<Tag className="w-3 h-3" />}
-                label="Qiziqish"
+                label="Интерес"
                 value={lead.interest}
                 editing={isEditing}
-                editEl={<Input value={f.interest} onChange={(e) => setField("interest", e.target.value)} className="h-8 text-sm" placeholder="Tur, aviabilet..." />}
+                editEl={<Input value={f.interest} onChange={(e) => setField("interest", e.target.value)} className="h-8 text-sm" placeholder="Тур, авиабилет..." />}
               />
               <FieldRow
                 icon={<Globe className="w-3 h-3" />}
-                label="Manba"
+                label="Источник"
                 value={lead.leadSource}
                 editing={isEditing}
                 editEl={
                   <Select value={f.leadSource || "none"} onValueChange={(v) => setField("leadSource", v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanlang" /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Выбрать" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
                       <SelectItem value="telegram">Telegram</SelectItem>
                       <SelectItem value="whatsapp">WhatsApp</SelectItem>
                       <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="web">Web sayt</SelectItem>
-                      <SelectItem value="phone">Telefon</SelectItem>
-                      <SelectItem value="referral">Tavsiya</SelectItem>
+                      <SelectItem value="web">Веб сайт</SelectItem>
+                      <SelectItem value="phone">Телефон</SelectItem>
+                      <SelectItem value="referral">Рекомендация</SelectItem>
                     </SelectContent>
                   </Select>
                 }
               />
               <FieldRow
                 icon={<User className="w-3 h-3" />}
-                label="Mas'ul operator"
+                label="Ответственный оператор"
                 value={lead.assignedTo}
                 editing={isEditing}
-                editEl={<Input value={f.assignedTo} onChange={(e) => setField("assignedTo", e.target.value)} className="h-8 text-sm" placeholder="Ism familiya" />}
+                editEl={<Input value={f.assignedTo} onChange={(e) => setField("assignedTo", e.target.value)} className="h-8 text-sm" placeholder="Имя фамилия" />}
               />
               <FieldRow
                 icon={<Gift className="w-3 h-3" />}
-                label="Tug'ilgan kun"
+                label="Дата рождения"
                 value={lead.birthday}
                 editing={isEditing}
                 editEl={<Input type="date" value={f.birthday} onChange={(e) => setField("birthday", e.target.value)} className="h-8 text-sm" />}
@@ -391,7 +388,7 @@ export default function LeadDetail() {
 
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Ichki Izoh</CardTitle>
+              <CardTitle className="text-base">Внутреннее примечание</CardTitle>
             </CardHeader>
             <CardContent>
               {isEditing ? (
@@ -399,90 +396,89 @@ export default function LeadDetail() {
                   value={f.notes}
                   onChange={(e) => setField("notes", e.target.value)}
                   className="min-h-[110px] text-sm"
-                  placeholder="Mijoz haqida qo'shimcha ma'lumot..."
+                  placeholder="Дополнительная информация о клиенте..."
                 />
               ) : (
                 <div className="bg-muted/40 p-3 rounded-md text-sm whitespace-pre-wrap min-h-[80px] text-muted-foreground">
-                  {lead.notes || "Hali izoh yo'q."}
+                  {lead.notes || "Примечаний пока нет."}
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* --- FLIGHT TAB --- */}
         <TabsContent value="flight" className="mt-0">
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <Plane className="w-4 h-4 text-primary" /> Aviabilet Ma'lumotlari
+                <Plane className="w-4 h-4 text-primary" /> Данные авиабилета
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
               <FieldRow
                 icon={<Building2 className="w-3 h-3" />}
-                label="Aviakompaniya"
+                label="Авиакомпания"
                 value={lead.airline}
                 editing={isEditing}
                 editEl={<Input value={f.airline} onChange={(e) => setField("airline", e.target.value)} className="h-8 text-sm" placeholder="Uzbekistan Airways" />}
               />
               <FieldRow
                 icon={<Hash className="w-3 h-3" />}
-                label="Reys raqami"
+                label="Номер рейса"
                 value={lead.flightNumber}
                 editing={isEditing}
                 editEl={<Input value={f.flightNumber} onChange={(e) => setField("flightNumber", e.target.value)} className="h-8 text-sm" placeholder="HY-701" />}
               />
               <FieldRow
                 icon={<Hash className="w-3 h-3" />}
-                label="Bron raqami"
+                label="Номер брони"
                 value={lead.bookingNumber}
                 editing={isEditing}
                 editEl={<Input value={f.bookingNumber} onChange={(e) => setField("bookingNumber", e.target.value)} className="h-8 text-sm" placeholder="ABCD12" />}
               />
               <FieldRow
                 icon={<Calendar className="w-3 h-3" />}
-                label="Jo'nash sanasi"
+                label="Дата вылета"
                 value={lead.departureDate}
                 editing={isEditing}
                 editEl={<Input value={f.departureDate} onChange={(e) => setField("departureDate", e.target.value)} className="h-8 text-sm" placeholder="2025-05-10 10:00" />}
               />
               <FieldRow
                 icon={<Calendar className="w-3 h-3" />}
-                label="Kelish sanasi"
+                label="Дата прилёта"
                 value={lead.arrivalDate}
                 editing={isEditing}
                 editEl={<Input value={f.arrivalDate} onChange={(e) => setField("arrivalDate", e.target.value)} className="h-8 text-sm" placeholder="2025-05-20 18:00" />}
               />
               <FieldRow
                 icon={<Users className="w-3 h-3" />}
-                label="Yo'lovchilar soni"
+                label="Кол-во пассажиров"
                 value={lead.passengersCount}
                 editing={isEditing}
                 editEl={<Input type="number" min={1} value={f.passengersCount} onChange={(e) => setField("passengersCount", e.target.value)} className="h-8 text-sm" placeholder="2" />}
               />
               <FieldRow
                 icon={<Luggage className="w-3 h-3" />}
-                label="Bagaj"
+                label="Багаж"
                 value={lead.luggage}
                 editing={isEditing}
-                editEl={<Input value={f.luggage} onChange={(e) => setField("luggage", e.target.value)} className="h-8 text-sm" placeholder="23 kg" />}
+                editEl={<Input value={f.luggage} onChange={(e) => setField("luggage", e.target.value)} className="h-8 text-sm" placeholder="23 кг" />}
               />
               <FieldRow
                 icon={<Luggage className="w-3 h-3" />}
-                label="Qo'l yukli"
+                label="Ручная кладь"
                 value={lead.handLuggage}
                 editing={isEditing}
-                editEl={<Input value={f.handLuggage} onChange={(e) => setField("handLuggage", e.target.value)} className="h-8 text-sm" placeholder="8 kg" />}
+                editEl={<Input value={f.handLuggage} onChange={(e) => setField("handLuggage", e.target.value)} className="h-8 text-sm" placeholder="8 кг" />}
               />
               <FieldRow
                 icon={<Tag className="w-3 h-3" />}
-                label="Tarif"
+                label="Тариф"
                 value={lead.tariff}
                 editing={isEditing}
                 editEl={
                   <Select value={f.tariff || "none"} onValueChange={(v) => setField("tariff", v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanlang" /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Выбрать" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
                       <SelectItem value="economy">Economy</SelectItem>
@@ -495,12 +491,12 @@ export default function LeadDetail() {
               />
               <FieldRow
                 icon={<Tag className="w-3 h-3" />}
-                label="Xizmat sinfi"
+                label="Класс обслуживания"
                 value={lead.serviceClass}
                 editing={isEditing}
                 editEl={
                   <Select value={f.serviceClass || "none"} onValueChange={(v) => setField("serviceClass", v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanlang" /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Выбрать" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
                       <SelectItem value="economy">Economy (Y)</SelectItem>
@@ -512,34 +508,34 @@ export default function LeadDetail() {
               />
               <FieldRow
                 icon={<CreditCard className="w-3 h-3" />}
-                label="To'lov holati"
+                label="Статус оплаты"
                 value={lead.paymentStatus}
                 editing={isEditing}
                 editEl={
                   <Select value={f.paymentStatus || "none"} onValueChange={(v) => setField("paymentStatus", v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanlang" /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Выбрать" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
-                      <SelectItem value="pending">To'lanmagan</SelectItem>
-                      <SelectItem value="partial">Qisman to'langan</SelectItem>
-                      <SelectItem value="paid">To'langan</SelectItem>
+                      <SelectItem value="pending">Не оплачено</SelectItem>
+                      <SelectItem value="partial">Частично оплачено</SelectItem>
+                      <SelectItem value="paid">Оплачено</SelectItem>
                     </SelectContent>
                   </Select>
                 }
               />
               <FieldRow
                 icon={<Users className="w-3 h-3" />}
-                label="Yosh toifasi"
+                label="Возрастная категория"
                 value={lead.ageCategory}
                 editing={isEditing}
                 editEl={
                   <Select value={f.ageCategory || "none"} onValueChange={(v) => setField("ageCategory", v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanlang" /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Выбрать" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
-                      <SelectItem value="adult">Katta yoshli</SelectItem>
-                      <SelectItem value="child">Bola (2-12)</SelectItem>
-                      <SelectItem value="infant">Chaqaloq (0-2)</SelectItem>
+                      <SelectItem value="adult">Взрослый</SelectItem>
+                      <SelectItem value="child">Ребёнок (2-12)</SelectItem>
+                      <SelectItem value="infant">Младенец (0-2)</SelectItem>
                     </SelectContent>
                   </Select>
                 }
@@ -548,18 +544,17 @@ export default function LeadDetail() {
           </Card>
         </TabsContent>
 
-        {/* --- TASKS TAB --- */}
         <TabsContent value="tasks" className="mt-0 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-sm">Vazifalar ro'yxati</h3>
+              <h3 className="font-semibold text-sm">Список задач</h3>
               <p className="text-xs text-muted-foreground">
-                {tasks?.filter(t => t.status === "open").length ?? 0} ta ochiq, {tasks?.filter(t => t.status === "completed").length ?? 0} ta bajarildi
+                {tasks?.filter(t => t.status === "open").length ?? 0} открытых, {tasks?.filter(t => t.status === "completed").length ?? 0} выполнено
               </p>
             </div>
             {!addingTask && (
               <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setAddingTask(true)}>
-                <Plus className="h-3.5 w-3.5" /> Vazifa qo'shish
+                <Plus className="h-3.5 w-3.5" /> Добавить задачу
               </Button>
             )}
           </div>
@@ -571,12 +566,12 @@ export default function LeadDetail() {
                   autoFocus
                   value={taskForm.title}
                   onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
-                  placeholder="Vazifa nomi..."
+                  placeholder="Название задачи..."
                   className="h-9"
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Muddat</label>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Срок</label>
                     <Input
                       type="date"
                       value={taskForm.dueDate}
@@ -585,30 +580,30 @@ export default function LeadDetail() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Muhimlik</label>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Приоритет</label>
                     <select
                       value={taskForm.priority}
                       onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value as any })}
                       className="h-8 w-full rounded-md border border-input bg-background px-3 text-xs"
                     >
-                      <option value="low">Past</option>
-                      <option value="medium">O'rta</option>
-                      <option value="high">Yuqori</option>
+                      <option value="low">Низкий</option>
+                      <option value="medium">Средний</option>
+                      <option value="high">Высокий</option>
                     </select>
                   </div>
                 </div>
                 <Input
                   value={taskForm.description}
                   onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
-                  placeholder="Izoh (ixtiyoriy)..."
+                  placeholder="Примечание (необязательно)..."
                   className="h-8 text-xs"
                 />
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => setAddingTask(false)}>
-                    Bekor
+                    Отмена
                   </Button>
                   <Button size="sm" className="flex-1 h-8 text-xs" onClick={handleCreateTask} disabled={!taskForm.title.trim() || createTaskMutation.isPending}>
-                    {createTaskMutation.isPending ? "..." : "Saqlash"}
+                    {createTaskMutation.isPending ? "..." : "Сохранить"}
                   </Button>
                 </div>
               </CardContent>
@@ -618,8 +613,8 @@ export default function LeadDetail() {
           {(!tasks || tasks.length === 0) && !addingTask ? (
             <div className="text-center py-10 text-muted-foreground text-sm border-2 border-dashed rounded-xl">
               <CheckSquare className="h-8 w-8 mx-auto mb-2 opacity-20" />
-              <p>Hali vazifa yo'q</p>
-              <p className="text-xs mt-1">Vazifa qo'shib kuzatuv olib boring</p>
+              <p>Задач пока нет</p>
+              <p className="text-xs mt-1">Добавьте задачу для отслеживания</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -627,9 +622,9 @@ export default function LeadDetail() {
                 const isDone = task.status === "completed";
                 const isOverdue = task.dueDate && !isDone && new Date(task.dueDate) < new Date();
                 const priorityConfig = {
-                  high: { label: "Yuqori", color: "text-red-500", bg: "bg-red-50 border-red-100" },
-                  medium: { label: "O'rta", color: "text-amber-500", bg: "bg-amber-50 border-amber-100" },
-                  low: { label: "Past", color: "text-blue-400", bg: "bg-blue-50 border-blue-100" },
+                  high: { label: "Высокий", color: "text-red-500", bg: "bg-red-50 border-red-100" },
+                  medium: { label: "Средний", color: "text-amber-500", bg: "bg-amber-50 border-amber-100" },
+                  low: { label: "Низкий", color: "text-blue-400", bg: "bg-blue-50 border-blue-100" },
                 };
                 const pc = priorityConfig[task.priority as keyof typeof priorityConfig] ?? priorityConfig.medium;
 
@@ -682,23 +677,22 @@ export default function LeadDetail() {
           )}
         </TabsContent>
 
-        {/* --- CONTACT TAB --- */}
         <TabsContent value="contact" className="mt-0">
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Aloqa Ma'lumotlari</CardTitle>
+              <CardTitle className="text-base">Контактные данные</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
               <FieldRow
                 icon={<User className="w-3 h-3" />}
-                label="Ism"
+                label="Имя"
                 value={lead.name}
                 editing={isEditing}
                 editEl={<Input value={f.name} onChange={(e) => setField("name", e.target.value)} className="h-8 text-sm" />}
               />
               <FieldRow
                 icon={<Phone className="w-3 h-3" />}
-                label="Telefon"
+                label="Телефон"
                 value={lead.phone}
                 editing={isEditing}
                 editEl={<Input value={f.phone} onChange={(e) => setField("phone", e.target.value)} className="h-8 text-sm" placeholder="+998901234567" />}
@@ -712,7 +706,7 @@ export default function LeadDetail() {
               />
               <FieldRow
                 icon={<Gift className="w-3 h-3" />}
-                label="Tug'ilgan kun"
+                label="Дата рождения"
                 value={lead.birthday}
                 editing={isEditing}
                 editEl={<Input type="date" value={f.birthday} onChange={(e) => setField("birthday", e.target.value)} className="h-8 text-sm" />}

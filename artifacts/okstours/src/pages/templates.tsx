@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useListTemplates, useCreateTemplate, useUpdateTemplate, useDeleteTemplate } from "@workspace/api-client-react";
-import { FileText, Plus, Edit2, Trash2, Save, X, ChevronDown } from "lucide-react";
+import { FileText, Plus, Edit2, Trash2, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,13 +18,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORIES = [
-  { value: "general", label: "Umumiy" },
-  { value: "greeting", label: "Salomlashish" },
-  { value: "ticket", label: "Aviabilet" },
-  { value: "hotel", label: "Mehmonxona" },
-  { value: "tour", label: "Tur" },
-  { value: "visa", label: "Viza" },
-  { value: "payment", label: "To'lov" },
+  { value: "general", label: "Общие" },
+  { value: "greeting", label: "Приветствие" },
+  { value: "ticket", label: "Авиабилет" },
+  { value: "hotel", label: "Отель" },
+  { value: "tour", label: "Тур" },
+  { value: "visa", label: "Виза" },
+  { value: "payment", label: "Оплата" },
 ];
 
 const categoryLabel = (cat: string) => CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
@@ -81,7 +81,7 @@ export default function Templates() {
 
   const handleSave = () => {
     if (!form.title.trim() || !form.content.trim()) {
-      toast({ title: "To'ldiring", description: "Sarlavha va kontent majburiy.", variant: "destructive" });
+      toast({ title: "Заполните поля", description: "Название и содержимое обязательны.", variant: "destructive" });
       return;
     }
 
@@ -92,9 +92,9 @@ export default function Templates() {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
             setDialogOpen(false);
-            toast({ title: "Yangilandi", description: "Shablon muvaffaqiyatli yangilandi." });
+            toast({ title: "Обновлено", description: "Шаблон успешно обновлён." });
           },
-          onError: () => toast({ title: "Xatolik", variant: "destructive" }),
+          onError: () => toast({ title: "Ошибка", variant: "destructive" }),
         }
       );
     } else {
@@ -104,9 +104,9 @@ export default function Templates() {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
             setDialogOpen(false);
-            toast({ title: "Yaratildi", description: "Shablon qo'shildi." });
+            toast({ title: "Создано", description: "Шаблон добавлен." });
           },
-          onError: () => toast({ title: "Xatolik", variant: "destructive" }),
+          onError: () => toast({ title: "Ошибка", variant: "destructive" }),
         }
       );
     }
@@ -119,9 +119,9 @@ export default function Templates() {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
           setDeleteId(null);
-          toast({ title: "O'chirildi" });
+          toast({ title: "Удалено" });
         },
-        onError: () => toast({ title: "Xatolik", variant: "destructive" }),
+        onError: () => toast({ title: "Ошибка", variant: "destructive" }),
       }
     );
   };
@@ -139,36 +139,36 @@ export default function Templates() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <FileText className="w-8 h-8 text-primary" />
-            Xabar Shablonlari
+            Шаблоны сообщений
           </h1>
-          <p className="text-muted-foreground">Operator rejimida tezkor foydalanish uchun shablonlar</p>
+          <p className="text-muted-foreground">Шаблоны для быстрого использования в режиме оператора</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={filterCat} onValueChange={setFilterCat}>
             <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Kategoriya" />
+              <SelectValue placeholder="Категория" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Barchasi</SelectItem>
+              <SelectItem value="all">Все</SelectItem>
               {CATEGORIES.map((c) => (
                 <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Button onClick={openCreate} className="gap-2">
-            <Plus className="w-4 h-4" /> Yangi Shablon
+            <Plus className="w-4 h-4" /> Новый шаблон
           </Button>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 animate-pulse text-muted-foreground">Yuklanmoqda...</div>
+        <div className="text-center py-12 animate-pulse text-muted-foreground">Загрузка...</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
           <FileText className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground text-sm">Hali shablonlar yo'q. Yangi shablon qo'shing.</p>
+          <p className="text-muted-foreground text-sm">Шаблонов пока нет. Добавьте новый шаблон.</p>
           <Button onClick={openCreate} className="mt-4 gap-2" variant="outline">
-            <Plus className="w-4 h-4" /> Shablon qo'shish
+            <Plus className="w-4 h-4" /> Добавить шаблон
           </Button>
         </div>
       ) : (
@@ -177,7 +177,7 @@ export default function Templates() {
             <div key={cat}>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Badge className={`${categoryColors[cat] ?? ""} border text-xs`}>{categoryLabel(cat)}</Badge>
-                <span className="text-muted-foreground/50">{items.length} ta shablon</span>
+                <span className="text-muted-foreground/50">{items.length} шаблонов</span>
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {items.map((t) => (
@@ -218,15 +218,14 @@ export default function Templates() {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editId !== null ? "Shablonni Tahrirlash" : "Yangi Shablon"}</DialogTitle>
+            <DialogTitle>{editId !== null ? "Редактировать шаблон" : "Новый шаблон"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
-              <label className="text-sm font-medium mb-1 block">Kategoriya</label>
+              <label className="text-sm font-medium mb-1 block">Категория</label>
               <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -239,28 +238,28 @@ export default function Templates() {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Sarlavha</label>
+              <label className="text-sm font-medium mb-1 block">Название</label>
               <Input
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="Masalan: Salomlashish xabari"
+                placeholder="Например: Приветственное сообщение"
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Kontent</label>
+              <label className="text-sm font-medium mb-1 block">Содержимое</label>
               <Textarea
                 value={form.content}
                 onChange={(e) => setForm({ ...form, content: e.target.value })}
-                placeholder="Shablon matni..."
+                placeholder="Текст шаблона..."
                 rows={5}
                 className="resize-none"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                {form.content.length} belgi
+                {form.content.length} символов
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Tartib raqami</label>
+              <label className="text-sm font-medium mb-1 block">Порядок</label>
               <Input
                 type="number"
                 value={form.sortOrder}
@@ -271,35 +270,36 @@ export default function Templates() {
             </div>
           </div>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Bekor qilish</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <X className="w-4 h-4 mr-1.5" /> Отмена
+            </Button>
             <Button
               onClick={handleSave}
               disabled={createMutation.isPending || updateMutation.isPending}
               className="gap-2"
             >
               <Save className="w-4 h-4" />
-              {createMutation.isPending || updateMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+              {createMutation.isPending || updateMutation.isPending ? "Сохранение..." : "Сохранить"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirm */}
       <AlertDialog open={deleteId !== null} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>O'chirishni tasdiqlang</AlertDialogTitle>
+            <AlertDialogTitle>Подтвердите удаление</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu shablonni o'chirib bo'lmaydi. Davom etasizmi?
+              Этот шаблон будет удалён. Продолжить?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => deleteId !== null && handleDelete(deleteId)}
             >
-              O'chirish
+              Удалить
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

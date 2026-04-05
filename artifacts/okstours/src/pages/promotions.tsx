@@ -62,60 +62,60 @@ export default function Promotions() {
     <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Promo / Aksiyalar</h1>
-          <p className="text-muted-foreground mt-1">AI agent faol aksiyalarni mijozlarga avtomatik aytib beradi.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Промо / Акции</h1>
+          <p className="text-muted-foreground mt-1">AI агент автоматически информирует клиентов об активных акциях.</p>
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
-              Yangi Aksiya
+              Новая акция
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Yangi Aksiya Qo'shish</DialogTitle>
+              <DialogTitle>Добавить новую акцию</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4 mt-2">
               <div>
-                <label className="text-sm font-medium mb-1 block">Aksiya nomi *</label>
+                <label className="text-sm font-medium mb-1 block">Название акции *</label>
                 <Input
                   value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                  placeholder="Masalan: Toshkent-Dubai Early Bird"
+                  placeholder="Например: Ташкент-Дубай Early Bird"
                   required
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Tavsif *</label>
+                <label className="text-sm font-medium mb-1 block">Описание *</label>
                 <Input
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="Aksiya shartlari va tafsilotlari"
+                  placeholder="Условия и детали акции"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Chegirma</label>
+                  <label className="text-sm font-medium mb-1 block">Скидка</label>
                   <Input
                     value={form.discount}
                     onChange={(e) => setForm((f) => ({ ...f, discount: e.target.value }))}
-                    placeholder="Masalan: 20%"
+                    placeholder="Например: 20%"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Yo'nalish</label>
+                  <label className="text-sm font-medium mb-1 block">Направление</label>
                   <Input
                     value={form.destination}
                     onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))}
-                    placeholder="Masalan: Dubai"
+                    placeholder="Например: Дубай"
                   />
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Amal qilish muddati</label>
+                <label className="text-sm font-medium mb-1 block">Срок действия</label>
                 <Input
                   type="date"
                   value={form.validUntil}
@@ -124,10 +124,10 @@ export default function Promotions() {
               </div>
               <div className="flex gap-2 pt-2">
                 <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>
-                  Bekor qilish
+                  Отмена
                 </Button>
                 <Button type="submit" className="flex-1" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+                  {createMutation.isPending ? "Сохранение..." : "Сохранить"}
                 </Button>
               </div>
             </form>
@@ -136,14 +136,14 @@ export default function Promotions() {
       </div>
 
       {isLoading ? (
-        <div className="animate-pulse text-center py-12 text-muted-foreground">Yuklanmoqda...</div>
+        <div className="animate-pulse text-center py-12 text-muted-foreground">Загрузка...</div>
       ) : !promotions || promotions.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
             <Tag className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground font-medium">Hali aksiyalar yo'q</p>
+            <p className="text-muted-foreground font-medium">Акций пока нет</p>
             <p className="text-sm text-muted-foreground/60 mt-1">
-              Aksiya qo'shing — AI agent uni mijozlarga avtomatik tushuntiradi.
+              Добавьте акцию — AI агент будет автоматически рассказывать о ней клиентам.
             </p>
           </CardContent>
         </Card>
@@ -171,7 +171,7 @@ export default function Promotions() {
                       {promo.validUntil && (
                         <Badge variant="outline" className="gap-1 text-xs text-muted-foreground">
                           <CalendarDays className="h-3 w-3" />
-                          {new Date(promo.validUntil).toLocaleDateString("uz-UZ")} gacha
+                          до {new Date(promo.validUntil).toLocaleDateString("ru-RU")}
                         </Badge>
                       )}
                     </div>
@@ -190,7 +190,7 @@ export default function Promotions() {
               <CardContent>
                 <p className="text-sm text-muted-foreground leading-relaxed">{promo.description}</p>
                 <p className="text-xs text-muted-foreground/50 mt-3">
-                  {new Date(promo.createdAt).toLocaleDateString("uz-UZ")} da qo'shildi
+                  Добавлено {new Date(promo.createdAt).toLocaleDateString("ru-RU")}
                 </p>
               </CardContent>
             </Card>
@@ -200,9 +200,9 @@ export default function Promotions() {
 
       <Card className="bg-primary/5 border-primary/20">
         <CardContent className="py-4 px-5">
-          <p className="text-sm font-medium text-primary mb-1">AI Agent qanday ishlaydi?</p>
+          <p className="text-sm font-medium text-primary mb-1">Как работает AI агент?</p>
           <p className="text-sm text-muted-foreground">
-            Faol aksiyalar AI agentning tizim promptiga avtomatik qo'shiladi. Mijoz narx yoki tur so'raganda, AI tegishli aksiyani o'zi tanishtiradi.
+            Активные акции автоматически добавляются в системный промпт AI агента. Когда клиент спрашивает о ценах или турах, AI сам рассказывает о подходящей акции.
           </p>
         </CardContent>
       </Card>
