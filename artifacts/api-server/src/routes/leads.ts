@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { desc, eq } from "drizzle-orm";
-import { db, leadsTable, conversationsTable, messagesTable, activityTable } from "@workspace/db";
+import { desc, eq, inArray } from "drizzle-orm";
+import { db, leadsTable, conversationsTable, messagesTable, activityTable, settingsTable } from "@workspace/db";
 import {
   ListLeadsQueryParams,
   CreateLeadBody,
@@ -10,6 +10,7 @@ import {
   BookLeadParams,
   BookLeadBody,
 } from "@workspace/api-zod";
+import * as telegramAccount from "../services/telegram-account.js";
 
 const router: IRouter = Router();
 
@@ -142,6 +143,83 @@ router.post("/leads/:id/book", async (req, res): Promise<void> => {
   });
 
   res.json(formatLead(updatedLead));
+});
+
+// ─── BULK MESSAGE (Mass Messaging) ───────────────────────────────────────────
+router.post("/leads/bulk-message", async (req, res): Promise<void> => {
+  const { leadIds, message } = req.body;
+
+  if (!Array.isArray(leadIds) || leadIds.length === 0 || !message?.trim()) {
+    res.status(400).json({ error: "leadIds (массив) и message обязательны" });
+    return;
+  }
+
+  // Get bot token for Telegram fallback
+  const [tokenRow] = await db.select().from(settingsTable).where(eq(settingsTable.key, "telegram_bot_token"));
+  const botToken = tokenRow?.value ?? null;
+
+  // Fetch leads with their conversations
+  const leads = await db.select().from(leadsTable).where(inArray(leadsTable.id, leadIds));
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const lead of leads) {
+    try {
+      if (!lead.conversationId) { failed++; continue; }
+
+      const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, lead.conversationId));
+      if (!conv) { failed++; continue; }
+
+      // Save message to conversation
+      await db.insert(messagesTable).values({
+        conversationId: conv.id,
+        role: "assistant",
+        content: message,
+      });
+
+      await db.update(conversationsTable).set({
+        lastMessage: message,
+        lastMessageAt: new Date(),
+      }).where(eq(conversationsTable.id, conv.id));
+
+      // Send via Telegram
+      if (conv.channel === "telegram" && conv.externalId) {
+        let delivered = false;
+
+        if (telegramAccount.isConnected()) {
+          delivered = await telegramAccount.sendMessageToUser(conv.externalId, message);
+        }
+
+        if (!delivered && botToken) {
+          try {
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: conv.externalId, text: message }),
+            });
+            delivered = true;
+          } catch {}
+        }
+
+        if (delivered) sent++; else failed++;
+      } else {
+        // Non-telegram — message saved but not delivered externally
+        sent++;
+      }
+
+      await db.insert(activityTable).values({
+        type: "follow_up",
+        description: `Массовая рассылка: "${message.slice(0, 60)}${message.length > 60 ? "..." : ""}"`,
+        conversationId: conv.id,
+        leadId: lead.id,
+      });
+    } catch {
+      failed++;
+    }
+  }
+
+  res.json({ ok: true, sent, failed, total: leads.length });
 });
 
 export default router;

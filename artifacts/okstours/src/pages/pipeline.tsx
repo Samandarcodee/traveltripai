@@ -16,10 +16,16 @@ import {
   Snowflake,
   Calendar,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+
+function isRotting(lead: { updatedAt: string; status: string }): boolean {
+  const days = (Date.now() - new Date(lead.updatedAt).getTime()) / (1000 * 60 * 60 * 24);
+  return days > 3 && lead.status !== "booked" && lead.status !== "lost";
+}
 
 type Lead = {
   id: number;
@@ -117,15 +123,22 @@ function LeadCard({
       draggable
       onDragStart={(e) => onDragStart(e, lead.id)}
       onClick={handleCardClick}
-      className={`group bg-card border border-border rounded-xl p-4 shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 ${
-        isDragging ? "opacity-40 scale-95 rotate-1 cursor-grabbing" : ""
-      }`}
+      className={`group bg-card rounded-xl p-4 shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border ${
+        isRotting(lead)
+          ? "border-orange-300 hover:border-orange-400"
+          : "border-border hover:border-primary/30"
+      } ${isDragging ? "opacity-40 scale-95 rotate-1 cursor-grabbing" : ""}`}
     >
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-sm text-foreground truncate">
-            {lead.name || "Неизвестный"}
-          </p>
+          <div className="flex items-center gap-1.5">
+            {isRotting(lead) && (
+              <AlertTriangle className="h-3.5 w-3.5 text-orange-500 shrink-0" title="Нет активности 3+ дней" />
+            )}
+            <p className="font-semibold text-sm text-foreground truncate">
+              {lead.name || "Неизвестный"}
+            </p>
+          </div>
           {lead.phone && (
             <div className="flex items-center gap-1 mt-0.5">
               <Phone className="h-3 w-3 text-muted-foreground" />
@@ -262,6 +275,7 @@ export default function Pipeline() {
   }, {});
 
   const totalLeads = leads?.length ?? 0;
+  const rottingCount = (leads ?? []).filter(isRotting).length;
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -269,7 +283,15 @@ export default function Pipeline() {
         <div className="flex items-center gap-4">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-foreground">ВОРОНКА — Отделы</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Всего {totalLeads} лидов • Перетащите для изменения статуса</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Всего {totalLeads} лидов • Перетащите для изменения статуса
+              {rottingCount > 0 && (
+                <span className="ml-2 text-orange-600 font-semibold inline-flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  {rottingCount} без активности
+                </span>
+              )}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-3">

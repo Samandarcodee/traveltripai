@@ -1,8 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Link } from "wouter";
 import { useListLeads, useCreateLead } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { Users, Filter, Plus, Search, Phone, MapPin, X, Save, DollarSign, User } from "lucide-react";
+import {
+  Users, Filter, Plus, Search, Phone, MapPin, X, Save,
+  DollarSign, User, AlertTriangle, Send, CheckSquare, Square,
+  Megaphone, Clock,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -29,10 +33,24 @@ const statusColors: Record<string, string> = {
   lost: "bg-red-100 text-red-700",
 };
 
+function daysSince(dateStr: string): number {
+  return (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24);
+}
+
+function isRotting(lead: { updatedAt: string; status: string }): boolean {
+  return daysSince(lead.updatedAt) > 3 && lead.status !== "booked" && lead.status !== "lost";
+}
+
 export default function Leads() {
   const [segment, setSegment] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkSegment, setBulkSegment] = useState("all");
+  const [bulkSearch, setBulkSearch] = useState("");
+  const [sending, setSending] = useState(false);
 
   const { data: leads, isLoading } = useListLeads({
     segment: segment !== "all" ? (segment as any) : undefined,
@@ -86,6 +104,65 @@ export default function Leads() {
     );
   });
 
+  const rottingLeads = filtered.filter(isRotting);
+
+  // Bulk messaging — filterable list
+  const bulkLeads = useMemo(() => {
+    return (leads ?? []).filter((l) => {
+      if (bulkSegment !== "all" && l.segment !== bulkSegment) return false;
+      if (bulkSearch) {
+        const q = bulkSearch.toLowerCase();
+        return (
+          (l.name ?? "").toLowerCase().includes(q) ||
+          (l.destination ?? "").toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [leads, bulkSegment, bulkSearch]);
+
+  const allBulkSelected = bulkLeads.length > 0 && bulkLeads.every((l) => selectedIds.has(l.id));
+
+  const toggleSelectAll = () => {
+    if (allBulkSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(bulkLeads.map((l) => l.id)));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const handleBulkSend = async () => {
+    if (selectedIds.size === 0 || !bulkMessage.trim()) return;
+    setSending(true);
+    try {
+      const res = await fetch("/api/leads/bulk-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadIds: Array.from(selectedIds), message: bulkMessage }),
+      });
+      const data = await res.json();
+      toast({
+        title: "Рассылка завершена",
+        description: `Отправлено: ${data.sent}, ошибок: ${data.failed} из ${data.total}`,
+      });
+      setBulkOpen(false);
+      setBulkMessage("");
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+    } catch {
+      toast({ title: "Ошибка", description: "Ошибка при отправке рассылки.", variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto flex flex-col h-full space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -110,11 +187,24 @@ export default function Leads() {
               <SelectItem value="cold">Холодный</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={() => { setBulkOpen(true); setSelectedIds(new Set()); }} className="gap-2 h-9">
+            <Megaphone className="w-4 h-4" /> Рассылка
+          </Button>
           <Button onClick={() => setCreateOpen(true)} className="gap-2 h-9">
             <Plus className="w-4 h-4" /> Новый лид
           </Button>
         </div>
       </div>
+
+      {rottingLeads.length > 0 && (
+        <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl px-4 py-3">
+          <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0" />
+          <div>
+            <span className="font-semibold">{rottingLeads.length} лид{rottingLeads.length > 1 ? "ов" : ""} без активности более 3 дней.</span>
+            <span className="text-orange-700 text-sm ml-2">Требуется контакт: {rottingLeads.map((l) => l.name || "Неизвестный").join(", ")}</span>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto">
         {isLoading ? (
@@ -134,50 +224,65 @@ export default function Leads() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((lead) => (
-              <Link key={lead.id} href={`/leads/${lead.id}`} className="block group">
-                <div className="bg-card border hover:border-primary/50 hover:shadow-md transition-all p-5 rounded-xl h-full flex flex-col gap-3">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-base group-hover:text-primary transition-colors line-clamp-1">
-                      {lead.name || "Неизвестный лид"}
-                    </h3>
-                    <Badge variant="outline" className={`ml-2 shrink-0 text-xs ${segmentColors[lead.segment] ?? ""}`}>
-                      {segmentLabels[lead.segment] ?? lead.segment}
-                    </Badge>
-                  </div>
+            {filtered.map((lead) => {
+              const rotting = isRotting(lead);
+              const daysAgo = Math.floor(daysSince(lead.updatedAt));
+              return (
+                <Link key={lead.id} href={`/leads/${lead.id}`} className="block group">
+                  <div className={`bg-card border hover:shadow-md transition-all p-5 rounded-xl h-full flex flex-col gap-3 ${
+                    rotting ? "border-orange-300 hover:border-orange-400" : "hover:border-primary/50"
+                  }`}>
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {rotting && (
+                          <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0" title="Нет активности 3+ дней" />
+                        )}
+                        <h3 className="font-bold text-base group-hover:text-primary transition-colors line-clamp-1">
+                          {lead.name || "Неизвестный лид"}
+                        </h3>
+                      </div>
+                      <Badge variant="outline" className={`ml-2 shrink-0 text-xs ${segmentColors[lead.segment] ?? ""}`}>
+                        {segmentLabels[lead.segment] ?? lead.segment}
+                      </Badge>
+                    </div>
 
-                  <div className="space-y-1.5 flex-1">
-                    {lead.destination && (
-                      <div className="flex items-center text-sm text-muted-foreground gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{lead.destination}</span>
-                      </div>
-                    )}
-                    {lead.phone && (
-                      <div className="flex items-center text-sm text-muted-foreground gap-1.5">
-                        <Phone className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{lead.phone}</span>
-                      </div>
-                    )}
-                    {lead.budget && (
-                      <div className="flex items-center text-sm text-muted-foreground gap-1.5">
-                        <DollarSign className="w-3.5 h-3.5 shrink-0" />
-                        <span>{lead.budget}</span>
-                      </div>
-                    )}
-                  </div>
+                    <div className="space-y-1.5 flex-1">
+                      {lead.destination && (
+                        <div className="flex items-center text-sm text-muted-foreground gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{lead.destination}</span>
+                        </div>
+                      )}
+                      {lead.phone && (
+                        <div className="flex items-center text-sm text-muted-foreground gap-1.5">
+                          <Phone className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{lead.phone}</span>
+                        </div>
+                      )}
+                      {lead.budget && (
+                        <div className="flex items-center text-sm text-muted-foreground gap-1.5">
+                          <DollarSign className="w-3.5 h-3.5 shrink-0" />
+                          <span>{lead.budget}</span>
+                        </div>
+                      )}
+                    </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t">
-                    <Badge className={`text-[10px] font-medium ${statusColors[lead.status] ?? ""}`} variant="secondary">
-                      {statusLabels[lead.status] ?? lead.status}
-                    </Badge>
-                    <span className="text-[10px] text-muted-foreground">
-                      {format(new Date(lead.createdAt), "d MMM yyyy")}
-                    </span>
+                    <div className="flex items-center justify-between pt-3 border-t">
+                      <Badge className={`text-[10px] font-medium ${statusColors[lead.status] ?? ""}`} variant="secondary">
+                        {statusLabels[lead.status] ?? lead.status}
+                      </Badge>
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        {rotting
+                          ? <span className="text-orange-600 font-medium">{daysAgo} дн. назад</span>
+                          : format(new Date(lead.updatedAt), "d MMM yyyy")
+                        }
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
@@ -185,9 +290,13 @@ export default function Leads() {
       {!isLoading && filtered.length > 0 && (
         <p className="text-xs text-muted-foreground">
           Всего {leads?.length ?? 0} лидов, показано {filtered.length}
+          {rottingLeads.length > 0 && (
+            <span className="ml-2 text-orange-600 font-medium">• {rottingLeads.length} без активности</span>
+          )}
         </p>
       )}
 
+      {/* ── CREATE LEAD DIALOG ─────────────────────────────── */}
       <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) resetForm(); }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -200,60 +309,31 @@ export default function Leads() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium mb-1 block">Имя *</label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Имя фамилия"
-                />
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Имя фамилия" />
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Телефон</label>
-                <Input
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="+998901234567"
-                />
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+998901234567" />
               </div>
             </div>
-
             <div>
               <label className="text-sm font-medium mb-1 block">Email</label>
-              <Input
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="email@gmail.com"
-                type="email"
-              />
+              <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@gmail.com" type="email" />
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium mb-1 block">Направление</label>
-                <Input
-                  value={form.destination}
-                  onChange={(e) => setForm({ ...form, destination: e.target.value })}
-                  placeholder="Дубай, Стамбул..."
-                />
+                <Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} placeholder="Дубай, Стамбул..." />
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Бюджет</label>
-                <Input
-                  value={form.budget}
-                  onChange={(e) => setForm({ ...form, budget: e.target.value })}
-                  placeholder="$1000"
-                />
+                <Input value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="$1000" />
               </div>
             </div>
-
             <div>
               <label className="text-sm font-medium mb-1 block">Интерес</label>
-              <Input
-                value={form.interest}
-                onChange={(e) => setForm({ ...form, interest: e.target.value })}
-                placeholder="Авиабилет, тур, отель..."
-              />
+              <Input value={form.interest} onChange={(e) => setForm({ ...form, interest: e.target.value })} placeholder="Авиабилет, тур, отель..." />
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium mb-1 block">Сегмент</label>
@@ -280,28 +360,113 @@ export default function Leads() {
                 </Select>
               </div>
             </div>
-
             <div>
               <label className="text-sm font-medium mb-1 block">Примечание</label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="Дополнительная информация..."
-                rows={3}
-              />
+              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Дополнительная информация..." rows={3} />
             </div>
-
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => { setCreateOpen(false); resetForm(); }}>
                 <X className="w-4 h-4 mr-2" /> Отмена
               </Button>
-              <Button
-                className="flex-1 gap-2"
-                onClick={handleCreate}
-                disabled={!form.name.trim() || createMutation.isPending}
-              >
+              <Button className="flex-1 gap-2" onClick={handleCreate} disabled={!form.name.trim() || createMutation.isPending}>
                 <Save className="w-4 h-4" />
                 {createMutation.isPending ? "Сохранение..." : "Сохранить"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── BULK MESSAGING DIALOG ─────────────────────────── */}
+      <Dialog open={bulkOpen} onOpenChange={(o) => { setBulkOpen(o); if (!o) { setSelectedIds(new Set()); setBulkMessage(""); } }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-primary" />
+              Массовая рассылка
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex gap-2 mt-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input value={bulkSearch} onChange={(e) => setBulkSearch(e.target.value)} placeholder="Фильтр по имени или направлению..." className="pl-9 h-9" />
+            </div>
+            <Select value={bulkSegment} onValueChange={setBulkSegment}>
+              <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все сегменты</SelectItem>
+                <SelectItem value="hot">Горячий</SelectItem>
+                <SelectItem value="warm">Тёплый</SelectItem>
+                <SelectItem value="cold">Холодный</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="border rounded-lg overflow-hidden flex-1 flex flex-col min-h-0">
+            <div
+              className="flex items-center gap-3 px-4 py-2.5 bg-muted/50 border-b cursor-pointer hover:bg-muted/80 transition-colors"
+              onClick={toggleSelectAll}
+            >
+              {allBulkSelected
+                ? <CheckSquare className="w-4 h-4 text-primary" />
+                : <Square className="w-4 h-4 text-muted-foreground" />
+              }
+              <span className="text-sm font-medium">Выбрать всех ({bulkLeads.length})</span>
+              {selectedIds.size > 0 && (
+                <Badge className="ml-auto text-xs">{selectedIds.size} выбрано</Badge>
+              )}
+            </div>
+            <div className="overflow-y-auto flex-1 max-h-64">
+              {bulkLeads.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">Нет лидов по фильтру</div>
+              ) : (
+                bulkLeads.map((lead) => (
+                  <div
+                    key={lead.id}
+                    className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors border-b last:border-b-0 ${selectedIds.has(lead.id) ? "bg-primary/5" : ""}`}
+                    onClick={() => toggleSelect(lead.id)}
+                  >
+                    {selectedIds.has(lead.id)
+                      ? <CheckSquare className="w-4 h-4 text-primary shrink-0" />
+                      : <Square className="w-4 h-4 text-muted-foreground shrink-0" />
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{lead.name || "Неизвестный"}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {lead.destination ? `${lead.destination} • ` : ""}{segmentLabels[lead.segment]}
+                        {!lead.conversationId && <span className="text-orange-500 ml-1">(нет чата)</span>}
+                      </p>
+                    </div>
+                    {isRotting(lead) && <AlertTriangle className="w-3.5 h-3.5 text-orange-500 shrink-0" />}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Текст сообщения</label>
+              <Textarea
+                value={bulkMessage}
+                onChange={(e) => setBulkMessage(e.target.value)}
+                placeholder="Привет! У нас горячая акция на туры в Дубай — скидка 15% до конца недели. Успейте забронировать!"
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Сообщение будет отправлено через Telegram выбранным лидам с активным чатом.</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setBulkOpen(false)}>
+                <X className="w-4 h-4 mr-2" /> Отмена
+              </Button>
+              <Button
+                className="flex-1 gap-2"
+                onClick={handleBulkSend}
+                disabled={selectedIds.size === 0 || !bulkMessage.trim() || sending}
+              >
+                <Send className="w-4 h-4" />
+                {sending ? "Отправка..." : `Отправить (${selectedIds.size})`}
               </Button>
             </div>
           </div>
