@@ -10,7 +10,9 @@ import {
   BarChart3,
   PhoneCall,
   Kanban,
-  FileText
+  FileText,
+  Settings2,
+  Send,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
@@ -25,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/templates", label: "Shablonlar", icon: FileText },
   { href: "/stats", label: "Statistika", icon: BarChart3 },
   { href: "/call-analysis", label: "Qo'ng'iroq Tahlili", icon: PhoneCall },
+  { href: "/settings", label: "Sozlamalar", icon: Settings2 },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

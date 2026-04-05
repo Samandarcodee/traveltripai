@@ -24,6 +24,10 @@ tags:
     description: Promo and discount management
   - name: callanalysis
     description: Call recording analysis
+  - name: settings
+    description: Application settings and integrations
+  - name: tasks
+    description: Task management (amoCRM-style)
 paths:
   /healthz:
     get:
@@ -574,6 +578,131 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TimeSeriesStats"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get application settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update application settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+
+  /settings/telegram/test:
+    post:
+      operationId: testTelegramBot
+      tags: [settings]
+      summary: Test Telegram bot connection
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramTestResult"
+
+  /leads/{leadId}/tasks:
+    get:
+      operationId: listLeadTasks
+      tags: [tasks]
+      summary: List tasks for a lead
+      parameters:
+        - name: leadId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createLeadTask
+      tags: [tasks]
+      summary: Create a task for a lead
+      parameters:
+        - name: leadId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskBody"
+      responses:
+        "201":
+          description: Created task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskBody"
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
 
 components:
   schemas:
@@ -1166,3 +1295,124 @@ components:
       required:
         - title
         - content
+
+    AppSettings:
+      type: object
+      properties:
+        telegramBotToken:
+          type: ["string", "null"]
+        telegramWebhookUrl:
+          type: ["string", "null"]
+        telegramBotUsername:
+          type: ["string", "null"]
+        telegramConnected:
+          type: boolean
+        operatorName:
+          type: ["string", "null"]
+        companyName:
+          type: ["string", "null"]
+      required:
+        - telegramConnected
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        telegramBotToken:
+          type: ["string", "null"]
+        telegramWebhookUrl:
+          type: ["string", "null"]
+        operatorName:
+          type: ["string", "null"]
+        companyName:
+          type: ["string", "null"]
+
+    TelegramTestResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        botUsername:
+          type: ["string", "null"]
+        botName:
+          type: ["string", "null"]
+        error:
+          type: ["string", "null"]
+      required:
+        - ok
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+        leadId:
+          type: ["integer", "null"]
+        conversationId:
+          type: ["integer", "null"]
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [open, completed, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        assignedTo:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - status
+        - priority
+        - createdAt
+        - updatedAt
+
+    CreateTaskBody:
+      type: object
+      properties:
+        leadId:
+          type: ["integer", "null"]
+        conversationId:
+          type: ["integer", "null"]
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [open, completed, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        assignedTo:
+          type: ["string", "null"]
+      required:
+        - title
+
+    UpdateTaskBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [open, completed, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        assignedTo:
+          type: ["string", "null"]

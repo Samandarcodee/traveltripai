@@ -583,3 +583,121 @@ export const GetTimeSeriesResponse = zod.object({
   totalLeads: zod.number(),
   totalBookings: zod.number(),
 });
+
+/**
+ * @summary Get application settings
+ */
+export const GetSettingsResponse = zod.object({
+  telegramBotToken: zod.string().nullish(),
+  telegramWebhookUrl: zod.string().nullish(),
+  telegramBotUsername: zod.string().nullish(),
+  telegramConnected: zod.boolean(),
+  operatorName: zod.string().nullish(),
+  companyName: zod.string().nullish(),
+});
+
+/**
+ * @summary Update application settings
+ */
+export const UpdateSettingsBody = zod.object({
+  telegramBotToken: zod.string().nullish(),
+  telegramWebhookUrl: zod.string().nullish(),
+  operatorName: zod.string().nullish(),
+  companyName: zod.string().nullish(),
+});
+
+export const UpdateSettingsResponse = zod.object({
+  telegramBotToken: zod.string().nullish(),
+  telegramWebhookUrl: zod.string().nullish(),
+  telegramBotUsername: zod.string().nullish(),
+  telegramConnected: zod.boolean(),
+  operatorName: zod.string().nullish(),
+  companyName: zod.string().nullish(),
+});
+
+/**
+ * @summary Test Telegram bot connection
+ */
+export const TestTelegramBotResponse = zod.object({
+  ok: zod.boolean(),
+  botUsername: zod.string().nullish(),
+  botName: zod.string().nullish(),
+  error: zod.string().nullish(),
+});
+
+/**
+ * @summary List tasks for a lead
+ */
+export const ListLeadTasksParams = zod.object({
+  leadId: zod.coerce.number(),
+});
+
+export const ListLeadTasksResponseItem = zod.object({
+  id: zod.number(),
+  leadId: zod.number().nullish(),
+  conversationId: zod.number().nullish(),
+  title: zod.string(),
+  description: zod.string().nullish(),
+  dueDate: zod.string().nullish(),
+  status: zod.enum(["open", "completed", "cancelled"]),
+  priority: zod.enum(["low", "medium", "high"]),
+  assignedTo: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListLeadTasksResponse = zod.array(ListLeadTasksResponseItem);
+
+/**
+ * @summary Create a task for a lead
+ */
+export const CreateLeadTaskParams = zod.object({
+  leadId: zod.coerce.number(),
+});
+
+export const CreateLeadTaskBody = zod.object({
+  leadId: zod.number().nullish(),
+  conversationId: zod.number().nullish(),
+  title: zod.string(),
+  description: zod.string().nullish(),
+  dueDate: zod.string().nullish(),
+  status: zod.enum(["open", "completed", "cancelled"]).optional(),
+  priority: zod.enum(["low", "medium", "high"]).optional(),
+  assignedTo: zod.string().nullish(),
+});
+
+/**
+ * @summary Update a task
+ */
+export const UpdateTaskParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateTaskBody = zod.object({
+  title: zod.string().optional(),
+  description: zod.string().nullish(),
+  dueDate: zod.string().nullish(),
+  status: zod.enum(["open", "completed", "cancelled"]).optional(),
+  priority: zod.enum(["low", "medium", "high"]).optional(),
+  assignedTo: zod.string().nullish(),
+});
+
+export const UpdateTaskResponse = zod.object({
+  id: zod.number(),
+  leadId: zod.number().nullish(),
+  conversationId: zod.number().nullish(),
+  title: zod.string(),
+  description: zod.string().nullish(),
+  dueDate: zod.string().nullish(),
+  status: zod.enum(["open", "completed", "cancelled"]),
+  priority: zod.enum(["low", "medium", "high"]),
+  assignedTo: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a task
+ */
+export const DeleteTaskParams = zod.object({
+  id: zod.coerce.number(),
+});

@@ -12,6 +12,7 @@ export const conversationsTable = pgTable("conversations", {
   lastMessage: text("last_message"),
   lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
   operatorMode: integer("operator_mode").notNull().default(0),
+  externalId: text("external_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { desc, eq } from "drizzle-orm";
-import { db, conversationsTable, messagesTable, activityTable } from "@workspace/db";
+import { db, conversationsTable, messagesTable, activityTable, settingsTable } from "@workspace/db";
 import {
   ListConversationsQueryParams,
   CreateConversationBody,
@@ -13,6 +13,21 @@ import {
   SendFollowUpParams,
 } from "@workspace/api-zod";
 import { openai } from "@workspace/integrations-openai-ai-server";
+
+async function getTelegramToken(): Promise<string | null> {
+  const [row] = await db.select().from(settingsTable).where(eq(settingsTable.key, "telegram_bot_token"));
+  return row?.value ?? null;
+}
+
+async function sendTelegramMsg(token: string, chatId: string, text: string): Promise<void> {
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    });
+  } catch {}
+}
 
 const router: IRouter = Router();
 
@@ -160,6 +175,13 @@ router.post("/conversations/:id/operator-reply", async (req, res): Promise<void>
     conversationId: params.data.id,
     leadId: conversation.leadId ?? undefined,
   });
+
+  if (conversation.channel === "telegram" && conversation.externalId) {
+    const token = await getTelegramToken();
+    if (token) {
+      await sendTelegramMsg(token, conversation.externalId, body.data.content);
+    }
+  }
 
   res.json(formatMsg(message));
 });

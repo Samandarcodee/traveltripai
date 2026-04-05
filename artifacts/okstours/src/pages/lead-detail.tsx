@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { useParams, Link } from "wouter";
-import { useGetLead, useUpdateLead, useBookLead } from "@workspace/api-client-react";
+import { useGetLead, useUpdateLead, useBookLead, useListLeadTasks, useCreateLeadTask, useUpdateTask, useDeleteTask } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import {
   ArrowLeft, Save, MapPin, DollarSign, MessageSquare, User, Phone,
   Mail, CheckCircle2, Plane, Calendar, Luggage, Users, CreditCard,
-  Tag, Gift, Globe, Building2, Hash, Edit3, X
+  Tag, Gift, Globe, Building2, Hash, Edit3, X, Plus, Trash2, Clock,
+  CheckSquare, Square, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +74,43 @@ export default function LeadDetail() {
   const [bookOpen, setBookOpen] = useState(false);
   const [travelDate, setTravelDate] = useState("");
   const [bookNotes, setBookNotes] = useState("");
+
+  const { data: tasks, refetch: refetchTasks } = useListLeadTasks(id, { query: { enabled: !!id } });
+  const createTaskMutation = useCreateLeadTask();
+  const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
+  const [taskForm, setTaskForm] = useState({ title: "", description: "", dueDate: "", priority: "medium" as "low" | "medium" | "high" });
+  const [addingTask, setAddingTask] = useState(false);
+
+  const handleCreateTask = () => {
+    if (!taskForm.title.trim()) return;
+    createTaskMutation.mutate(
+      { leadId: id, data: { title: taskForm.title, description: taskForm.description || null, dueDate: taskForm.dueDate || null, priority: taskForm.priority } },
+      {
+        onSuccess: () => {
+          refetchTasks();
+          setTaskForm({ title: "", description: "", dueDate: "", priority: "medium" });
+          setAddingTask(false);
+          toast({ title: "Vazifa yaratildi" });
+        },
+      }
+    );
+  };
+
+  const handleToggleTask = (taskId: number, currentStatus: string) => {
+    const newStatus = currentStatus === "completed" ? "open" : "completed";
+    updateTaskMutation.mutate(
+      { id: taskId, data: { status: newStatus } },
+      { onSuccess: () => refetchTasks() }
+    );
+  };
+
+  const handleDeleteTask = (taskId: number) => {
+    deleteTaskMutation.mutate(
+      { id: taskId },
+      { onSuccess: () => refetchTasks() }
+    );
+  };
 
   React.useEffect(() => {
     if (lead && Object.keys(formData).length === 0) {
@@ -276,6 +314,14 @@ export default function LeadDetail() {
           <TabsTrigger value="main">Asosiy</TabsTrigger>
           <TabsTrigger value="flight">Aviabilet</TabsTrigger>
           <TabsTrigger value="contact">Aloqa</TabsTrigger>
+          <TabsTrigger value="tasks" className="gap-1.5">
+            Vazifalar
+            {tasks && tasks.filter(t => t.status === "open").length > 0 && (
+              <span className="ml-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {tasks.filter(t => t.status === "open").length}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {/* --- MAIN TAB --- */}
@@ -500,6 +546,140 @@ export default function LeadDetail() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* --- TASKS TAB --- */}
+        <TabsContent value="tasks" className="mt-0 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-sm">Vazifalar ro'yxati</h3>
+              <p className="text-xs text-muted-foreground">
+                {tasks?.filter(t => t.status === "open").length ?? 0} ta ochiq, {tasks?.filter(t => t.status === "completed").length ?? 0} ta bajarildi
+              </p>
+            </div>
+            {!addingTask && (
+              <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setAddingTask(true)}>
+                <Plus className="h-3.5 w-3.5" /> Vazifa qo'shish
+              </Button>
+            )}
+          </div>
+
+          {addingTask && (
+            <Card className="shadow-sm border-primary/30">
+              <CardContent className="py-4 space-y-3">
+                <Input
+                  autoFocus
+                  value={taskForm.title}
+                  onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                  placeholder="Vazifa nomi..."
+                  className="h-9"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Muddat</label>
+                    <Input
+                      type="date"
+                      value={taskForm.dueDate}
+                      onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Muhimlik</label>
+                    <select
+                      value={taskForm.priority}
+                      onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value as any })}
+                      className="h-8 w-full rounded-md border border-input bg-background px-3 text-xs"
+                    >
+                      <option value="low">Past</option>
+                      <option value="medium">O'rta</option>
+                      <option value="high">Yuqori</option>
+                    </select>
+                  </div>
+                </div>
+                <Input
+                  value={taskForm.description}
+                  onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+                  placeholder="Izoh (ixtiyoriy)..."
+                  className="h-8 text-xs"
+                />
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => setAddingTask(false)}>
+                    Bekor
+                  </Button>
+                  <Button size="sm" className="flex-1 h-8 text-xs" onClick={handleCreateTask} disabled={!taskForm.title.trim() || createTaskMutation.isPending}>
+                    {createTaskMutation.isPending ? "..." : "Saqlash"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {(!tasks || tasks.length === 0) && !addingTask ? (
+            <div className="text-center py-10 text-muted-foreground text-sm border-2 border-dashed rounded-xl">
+              <CheckSquare className="h-8 w-8 mx-auto mb-2 opacity-20" />
+              <p>Hali vazifa yo'q</p>
+              <p className="text-xs mt-1">Vazifa qo'shib kuzatuv olib boring</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {(tasks ?? []).map((task) => {
+                const isDone = task.status === "completed";
+                const isOverdue = task.dueDate && !isDone && new Date(task.dueDate) < new Date();
+                const priorityConfig = {
+                  high: { label: "Yuqori", color: "text-red-500", bg: "bg-red-50 border-red-100" },
+                  medium: { label: "O'rta", color: "text-amber-500", bg: "bg-amber-50 border-amber-100" },
+                  low: { label: "Past", color: "text-blue-400", bg: "bg-blue-50 border-blue-100" },
+                };
+                const pc = priorityConfig[task.priority as keyof typeof priorityConfig] ?? priorityConfig.medium;
+
+                return (
+                  <div
+                    key={task.id}
+                    className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                      isDone ? "opacity-50 bg-muted/30" : "bg-card hover:border-primary/30"
+                    }`}
+                  >
+                    <button
+                      onClick={() => handleToggleTask(task.id, task.status)}
+                      className="mt-0.5 shrink-0"
+                    >
+                      {isDone ? (
+                        <CheckSquare className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Square className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                      )}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${isDone ? "line-through text-muted-foreground" : ""}`}>
+                        {task.title}
+                      </p>
+                      {task.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{task.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${pc.bg} ${pc.color}`}>
+                          {pc.label}
+                        </span>
+                        {task.dueDate && (
+                          <span className={`flex items-center gap-0.5 text-[10px] ${isOverdue ? "text-red-500" : "text-muted-foreground"}`}>
+                            {isOverdue ? <AlertCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                            {format(new Date(task.dueDate), "d MMM yyyy")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="text-muted-foreground hover:text-red-500 transition-colors shrink-0"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         {/* --- CONTACT TAB --- */}

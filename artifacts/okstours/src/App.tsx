@@ -16,6 +16,7 @@ import Stats from "@/pages/stats";
 import CallAnalysis from "@/pages/call-analysis";
 import Pipeline from "@/pages/pipeline";
 import TemplatesPage from "@/pages/templates";
+import Settings from "@/pages/settings";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ function Router() {
         <Route path="/templates" component={TemplatesPage} />
         <Route path="/stats" component={Stats} />
         <Route path="/call-analysis" component={CallAnalysis} />
+        <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

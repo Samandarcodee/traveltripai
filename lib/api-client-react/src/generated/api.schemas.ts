@@ -512,6 +512,140 @@ export interface CreateTemplateBody {
   sortOrder?: number;
 }
 
+export interface AppSettings {
+  /** @nullable */
+  telegramBotToken?: string | null;
+  /** @nullable */
+  telegramWebhookUrl?: string | null;
+  /** @nullable */
+  telegramBotUsername?: string | null;
+  telegramConnected: boolean;
+  /** @nullable */
+  operatorName?: string | null;
+  /** @nullable */
+  companyName?: string | null;
+}
+
+export interface UpdateSettingsBody {
+  /** @nullable */
+  telegramBotToken?: string | null;
+  /** @nullable */
+  telegramWebhookUrl?: string | null;
+  /** @nullable */
+  operatorName?: string | null;
+  /** @nullable */
+  companyName?: string | null;
+}
+
+export interface TelegramTestResult {
+  ok: boolean;
+  /** @nullable */
+  botUsername?: string | null;
+  /** @nullable */
+  botName?: string | null;
+  /** @nullable */
+  error?: string | null;
+}
+
+export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
+
+export const TaskStatus = {
+  open: "open",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority];
+
+export const TaskPriority = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface Task {
+  id: number;
+  /** @nullable */
+  leadId?: number | null;
+  /** @nullable */
+  conversationId?: number | null;
+  title: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  /** @nullable */
+  assignedTo?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateTaskBodyStatus =
+  (typeof CreateTaskBodyStatus)[keyof typeof CreateTaskBodyStatus];
+
+export const CreateTaskBodyStatus = {
+  open: "open",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+export type CreateTaskBodyPriority =
+  (typeof CreateTaskBodyPriority)[keyof typeof CreateTaskBodyPriority];
+
+export const CreateTaskBodyPriority = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface CreateTaskBody {
+  /** @nullable */
+  leadId?: number | null;
+  /** @nullable */
+  conversationId?: number | null;
+  title: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  status?: CreateTaskBodyStatus;
+  priority?: CreateTaskBodyPriority;
+  /** @nullable */
+  assignedTo?: string | null;
+}
+
+export type UpdateTaskBodyStatus =
+  (typeof UpdateTaskBodyStatus)[keyof typeof UpdateTaskBodyStatus];
+
+export const UpdateTaskBodyStatus = {
+  open: "open",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+export type UpdateTaskBodyPriority =
+  (typeof UpdateTaskBodyPriority)[keyof typeof UpdateTaskBodyPriority];
+
+export const UpdateTaskBodyPriority = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface UpdateTaskBody {
+  title?: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  status?: UpdateTaskBodyStatus;
+  priority?: UpdateTaskBodyPriority;
+  /** @nullable */
+  assignedTo?: string | null;
+}
+
 export type ListConversationsParams = {
   status?: ListConversationsStatus;
   channel?: string;

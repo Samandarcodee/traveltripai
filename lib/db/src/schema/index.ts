@@ -4,3 +4,5 @@ export * from "./leads";
 export * from "./activity";
 export * from "./promotions";
 export * from "./templates";
+export * from "./settings";
+export * from "./tasks";
