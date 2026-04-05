@@ -231,6 +231,21 @@ export const ListLeadsResponseItem = zod.object({
   status: zod.enum(["new", "contacted", "qualified", "booked", "lost"]),
   notes: zod.string().nullable(),
   conversationId: zod.number().nullable(),
+  airline: zod.string().nullish(),
+  flightNumber: zod.string().nullish(),
+  bookingNumber: zod.string().nullish(),
+  departureDate: zod.string().nullish(),
+  arrivalDate: zod.string().nullish(),
+  luggage: zod.string().nullish(),
+  handLuggage: zod.string().nullish(),
+  tariff: zod.string().nullish(),
+  passengersCount: zod.string().nullish(),
+  serviceClass: zod.string().nullish(),
+  paymentStatus: zod.string().nullish(),
+  ageCategory: zod.string().nullish(),
+  leadSource: zod.string().nullish(),
+  birthday: zod.string().nullish(),
+  assignedTo: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -271,6 +286,21 @@ export const GetLeadResponse = zod.object({
   status: zod.enum(["new", "contacted", "qualified", "booked", "lost"]),
   notes: zod.string().nullable(),
   conversationId: zod.number().nullable(),
+  airline: zod.string().nullish(),
+  flightNumber: zod.string().nullish(),
+  bookingNumber: zod.string().nullish(),
+  departureDate: zod.string().nullish(),
+  arrivalDate: zod.string().nullish(),
+  luggage: zod.string().nullish(),
+  handLuggage: zod.string().nullish(),
+  tariff: zod.string().nullish(),
+  passengersCount: zod.string().nullish(),
+  serviceClass: zod.string().nullish(),
+  paymentStatus: zod.string().nullish(),
+  ageCategory: zod.string().nullish(),
+  leadSource: zod.string().nullish(),
+  birthday: zod.string().nullish(),
+  assignedTo: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -294,6 +324,21 @@ export const UpdateLeadBody = zod.object({
     .enum(["new", "contacted", "qualified", "booked", "lost"])
     .optional(),
   notes: zod.string().nullish(),
+  airline: zod.string().nullish(),
+  flightNumber: zod.string().nullish(),
+  bookingNumber: zod.string().nullish(),
+  departureDate: zod.string().nullish(),
+  arrivalDate: zod.string().nullish(),
+  luggage: zod.string().nullish(),
+  handLuggage: zod.string().nullish(),
+  tariff: zod.string().nullish(),
+  passengersCount: zod.string().nullish(),
+  serviceClass: zod.string().nullish(),
+  paymentStatus: zod.string().nullish(),
+  ageCategory: zod.string().nullish(),
+  leadSource: zod.string().nullish(),
+  birthday: zod.string().nullish(),
+  assignedTo: zod.string().nullish(),
 });
 
 export const UpdateLeadResponse = zod.object({
@@ -308,6 +353,21 @@ export const UpdateLeadResponse = zod.object({
   status: zod.enum(["new", "contacted", "qualified", "booked", "lost"]),
   notes: zod.string().nullable(),
   conversationId: zod.number().nullable(),
+  airline: zod.string().nullish(),
+  flightNumber: zod.string().nullish(),
+  bookingNumber: zod.string().nullish(),
+  departureDate: zod.string().nullish(),
+  arrivalDate: zod.string().nullish(),
+  luggage: zod.string().nullish(),
+  handLuggage: zod.string().nullish(),
+  tariff: zod.string().nullish(),
+  passengersCount: zod.string().nullish(),
+  serviceClass: zod.string().nullish(),
+  paymentStatus: zod.string().nullish(),
+  ageCategory: zod.string().nullish(),
+  leadSource: zod.string().nullish(),
+  birthday: zod.string().nullish(),
+  assignedTo: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -336,6 +396,21 @@ export const BookLeadResponse = zod.object({
   status: zod.enum(["new", "contacted", "qualified", "booked", "lost"]),
   notes: zod.string().nullable(),
   conversationId: zod.number().nullable(),
+  airline: zod.string().nullish(),
+  flightNumber: zod.string().nullish(),
+  bookingNumber: zod.string().nullish(),
+  departureDate: zod.string().nullish(),
+  arrivalDate: zod.string().nullish(),
+  luggage: zod.string().nullish(),
+  handLuggage: zod.string().nullish(),
+  tariff: zod.string().nullish(),
+  passengersCount: zod.string().nullish(),
+  serviceClass: zod.string().nullish(),
+  paymentStatus: zod.string().nullish(),
+  ageCategory: zod.string().nullish(),
+  leadSource: zod.string().nullish(),
+  birthday: zod.string().nullish(),
+  assignedTo: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -370,6 +445,59 @@ export const CreatePromotionBody = zod.object({
  * @summary Delete a promotion
  */
 export const DeletePromotionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List all message templates
+ */
+export const ListTemplatesResponseItem = zod.object({
+  id: zod.number(),
+  category: zod.string(),
+  title: zod.string(),
+  content: zod.string(),
+  sortOrder: zod.number(),
+  createdAt: zod.string(),
+});
+export const ListTemplatesResponse = zod.array(ListTemplatesResponseItem);
+
+/**
+ * @summary Create a message template
+ */
+export const CreateTemplateBody = zod.object({
+  category: zod.string().optional(),
+  title: zod.string(),
+  content: zod.string(),
+  sortOrder: zod.number().optional(),
+});
+
+/**
+ * @summary Update a template
+ */
+export const UpdateTemplateParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateTemplateBody = zod.object({
+  category: zod.string().optional(),
+  title: zod.string(),
+  content: zod.string(),
+  sortOrder: zod.number().optional(),
+});
+
+export const UpdateTemplateResponse = zod.object({
+  id: zod.number(),
+  category: zod.string(),
+  title: zod.string(),
+  content: zod.string(),
+  sortOrder: zod.number(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a template
+ */
+export const DeleteTemplateParams = zod.object({
   id: zod.coerce.number(),
 });
 

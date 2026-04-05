@@ -15,6 +15,7 @@ import Promotions from "@/pages/promotions";
 import Stats from "@/pages/stats";
 import CallAnalysis from "@/pages/call-analysis";
 import Pipeline from "@/pages/pipeline";
+import TemplatesPage from "@/pages/templates";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ function Router() {
         <Route path="/leads/:id" component={LeadDetail} />
         <Route path="/pipeline" component={Pipeline} />
         <Route path="/promotions" component={Promotions} />
+        <Route path="/templates" component={TemplatesPage} />
         <Route path="/stats" component={Stats} />
         <Route path="/call-analysis" component={CallAnalysis} />
         <Route component={NotFound} />

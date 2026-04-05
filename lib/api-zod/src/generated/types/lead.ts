@@ -28,6 +28,36 @@ export interface Lead {
   notes: string | null;
   /** @nullable */
   conversationId: number | null;
+  /** @nullable */
+  airline?: string | null;
+  /** @nullable */
+  flightNumber?: string | null;
+  /** @nullable */
+  bookingNumber?: string | null;
+  /** @nullable */
+  departureDate?: string | null;
+  /** @nullable */
+  arrivalDate?: string | null;
+  /** @nullable */
+  luggage?: string | null;
+  /** @nullable */
+  handLuggage?: string | null;
+  /** @nullable */
+  tariff?: string | null;
+  /** @nullable */
+  passengersCount?: string | null;
+  /** @nullable */
+  serviceClass?: string | null;
+  /** @nullable */
+  paymentStatus?: string | null;
+  /** @nullable */
+  ageCategory?: string | null;
+  /** @nullable */
+  leadSource?: string | null;
+  /** @nullable */
+  birthday?: string | null;
+  /** @nullable */
+  assignedTo?: string | null;
   createdAt: string;
   updatedAt: string;
 }

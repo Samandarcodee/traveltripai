@@ -6,6 +6,7 @@ import statsRouter from "./stats";
 import chatRouter from "./chat";
 import promotionsRouter from "./promotions";
 import callAnalysisRouter from "./call-analysis";
+import templatesRouter from "./templates";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(statsRouter);
 router.use(chatRouter);
 router.use(promotionsRouter);
 router.use(callAnalysisRouter);
+router.use(templatesRouter);
 
 export default router;

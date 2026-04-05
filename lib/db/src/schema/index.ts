@@ -3,3 +3,4 @@ export * from "./messages";
 export * from "./leads";
 export * from "./activity";
 export * from "./promotions";
+export * from "./templates";

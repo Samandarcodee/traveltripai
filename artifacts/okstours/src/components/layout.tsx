@@ -9,7 +9,8 @@ import {
   Tag,
   BarChart3,
   PhoneCall,
-  Kanban
+  Kanban,
+  FileText
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/pipeline", label: "Voronka (Pipeline)", icon: Kanban },
   { href: "/leads", label: "Lidlar (CRM)", icon: Briefcase },
   { href: "/promotions", label: "Promo / Aksiyalar", icon: Tag },
+  { href: "/templates", label: "Shablonlar", icon: FileText },
   { href: "/stats", label: "Statistika", icon: BarChart3 },
   { href: "/call-analysis", label: "Qo'ng'iroq Tahlili", icon: PhoneCall },
 ];

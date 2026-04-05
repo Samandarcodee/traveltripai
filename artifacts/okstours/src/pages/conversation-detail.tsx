@@ -6,16 +6,26 @@ import {
   useUpdateConversation,
   useOperatorReply,
   useSendFollowUp,
+  useListTemplates,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { ArrowLeft, User, Bot, CheckCircle, Headset, Send, Zap, Shield } from "lucide-react";
+import { ArrowLeft, User, Bot, CheckCircle, Headset, Send, Zap, Shield, ChevronDown, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChannelIcon } from "@/components/channel-icon";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function ConversationDetail() {
   const params = useParams();
@@ -26,10 +36,10 @@ export default function ConversationDetail() {
   const { data: conversation, isLoading: convLoading } = useGetConversation(id, {
     query: { enabled: !!id },
   });
-
   const { data: messages, isLoading: msgsLoading } = useGetConversationMessages(id, {
     query: { enabled: !!id },
   });
+  const { data: templates } = useListTemplates();
 
   const updateMutation = useUpdateConversation();
   const operatorReplyMutation = useOperatorReply();
@@ -78,10 +88,8 @@ export default function ConversationDetail() {
   const handleOperatorSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!operatorInput.trim() || operatorReplyMutation.isPending) return;
-
     const content = operatorInput;
     setOperatorInput("");
-
     operatorReplyMutation.mutate(
       { id, data: { content } },
       {
@@ -109,10 +117,7 @@ export default function ConversationDetail() {
             (old: any[]) => old ? [...old, newMsg] : [newMsg]
           );
           queryClient.invalidateQueries({ queryKey: [`/api/conversations/${id}`] });
-          toast({
-            title: "Follow-up yuborildi",
-            description: "AI agent follow-up xabarini yubordi.",
-          });
+          toast({ title: "Follow-up yuborildi", description: "AI agent follow-up xabarini yubordi." });
         },
         onError: () => {
           toast({ title: "Xatolik", description: "Follow-up yuborishda xatolik.", variant: "destructive" });
@@ -121,10 +126,31 @@ export default function ConversationDetail() {
     );
   };
 
+  const insertTemplate = (content: string) => {
+    setOperatorInput(content);
+  };
+
   if (convLoading || msgsLoading) return <div className="p-8 text-center animate-pulse">Yuklanmoqda...</div>;
   if (!conversation) return <div className="p-8 text-center">Suhbat topilmadi</div>;
 
   const isOperatorMode = conversation.operatorMode;
+
+  // Group templates by category
+  const templatesByCategory: Record<string, typeof templates> = {};
+  (templates ?? []).forEach((t) => {
+    if (!templatesByCategory[t.category]) templatesByCategory[t.category] = [];
+    templatesByCategory[t.category]!.push(t);
+  });
+
+  const categoryLabels: Record<string, string> = {
+    general: "Umumiy",
+    greeting: "Salomlashish",
+    ticket: "Aviabilet",
+    hotel: "Mehmonxona",
+    tour: "Tur",
+    visa: "Viza",
+    payment: "To'lov",
+  };
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -163,9 +189,7 @@ export default function ConversationDetail() {
         <div className="flex items-center gap-2">
           {conversation.leadId && (
             <Link href={`/leads/${conversation.leadId}`}>
-              <Button variant="outline" size="sm" className="text-xs h-8">
-                Lidni ko'rish
-              </Button>
+              <Button variant="outline" size="sm" className="text-xs h-8">Lidni ko'rish</Button>
             </Link>
           )}
 
@@ -182,9 +206,7 @@ export default function ConversationDetail() {
                 {isOperatorMode ? "AI ga qaytarish" : "Operator rejimi"}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              {isOperatorMode ? "AI agent yana javob bersin" : "Siz o'zingiz javob bering"}
-            </TooltipContent>
+            <TooltipContent>{isOperatorMode ? "AI agent yana javob bersin" : "Siz o'zingiz javob bering"}</TooltipContent>
           </Tooltip>
 
           {conversation.status !== "closed" && (
@@ -231,20 +253,14 @@ export default function ConversationDetail() {
           {messages?.map((msg) => {
             const isUser = msg.role === "user";
             const isOperatorMsg = msg.role === "operator";
-
             return (
-              <div
-                key={msg.id}
-                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-              >
+              <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                 <div className={`flex max-w-[85%] gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-1 ${
-                      isUser
-                        ? "bg-muted text-muted-foreground"
-                        : isOperatorMsg
-                        ? "bg-amber-500 text-white"
-                        : "bg-primary text-primary-foreground"
+                      isUser ? "bg-muted text-muted-foreground" :
+                      isOperatorMsg ? "bg-amber-500 text-white" :
+                      "bg-primary text-primary-foreground"
                     }`}
                   >
                     {isUser ? <User size={12} /> : isOperatorMsg ? <Headset size={12} /> : <Bot size={12} />}
@@ -255,20 +271,14 @@ export default function ConversationDetail() {
                     )}
                     <div
                       className={`p-3.5 rounded-2xl ${
-                        isUser
-                          ? "bg-secondary text-secondary-foreground rounded-tr-sm"
-                          : isOperatorMsg
-                          ? "bg-amber-50 border border-amber-200 rounded-tl-sm"
-                          : "bg-card border shadow-sm rounded-tl-sm"
+                        isUser ? "bg-secondary text-secondary-foreground rounded-tr-sm" :
+                        isOperatorMsg ? "bg-amber-50 border border-amber-200 rounded-tl-sm" :
+                        "bg-card border shadow-sm rounded-tl-sm"
                       }`}
                     >
                       <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                     </div>
-                    <div
-                      className={`text-[10px] text-muted-foreground mt-1 flex ${
-                        isUser ? "justify-end" : "justify-start"
-                      }`}
-                    >
+                    <div className={`text-[10px] text-muted-foreground mt-1 flex ${isUser ? "justify-end" : "justify-start"}`}>
                       {format(new Date(msg.createdAt), "h:mm a")}
                     </div>
                   </div>
@@ -282,27 +292,78 @@ export default function ConversationDetail() {
 
       {conversation.status !== "closed" && isOperatorMode && (
         <div className="px-6 py-3 bg-amber-50 border-t border-amber-200">
-          <form onSubmit={handleOperatorSend} className="flex gap-2 max-w-3xl mx-auto">
-            <div className="flex items-center gap-2 mr-2 shrink-0">
-              <Headset className="h-4 w-4 text-amber-600" />
-              <span className="text-xs font-medium text-amber-700">Operator</span>
+          <div className="max-w-3xl mx-auto space-y-2">
+            {/* Template picker row */}
+            <div className="flex items-center gap-2">
+              <FileText className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              <span className="text-xs font-medium text-amber-700 mr-1">Shablonlar:</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-amber-300 bg-white hover:bg-amber-50">
+                    Shablon tanlang <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-72 max-h-80 overflow-y-auto">
+                  {Object.keys(templatesByCategory).length === 0 ? (
+                    <div className="p-3 text-xs text-muted-foreground text-center">
+                      Shablonlar yo'q. Sozlamalarda qo'shing.
+                    </div>
+                  ) : (
+                    Object.entries(templatesByCategory).map(([cat, items], i) => (
+                      <React.Fragment key={cat}>
+                        {i > 0 && <DropdownMenuSeparator />}
+                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {categoryLabels[cat] ?? cat}
+                        </DropdownMenuLabel>
+                        <DropdownMenuGroup>
+                          {items?.map((t) => (
+                            <DropdownMenuItem
+                              key={t.id}
+                              className="flex flex-col items-start gap-0.5 cursor-pointer"
+                              onClick={() => insertTemplate(t.content)}
+                            >
+                              <span className="font-medium text-xs">{t.title}</span>
+                              <span className="text-[11px] text-muted-foreground truncate w-full">{t.content.slice(0, 60)}...</span>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuGroup>
+                      </React.Fragment>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <span className="text-[11px] text-amber-600/70 ml-1">Shablonni tanlasangiz, matn maydonga joylashadi</span>
             </div>
-            <Input
-              value={operatorInput}
-              onChange={(e) => setOperatorInput(e.target.value)}
-              placeholder="Mijozga xabar yozing..."
-              className="flex-1 bg-white border-amber-200 focus-visible:ring-amber-400"
-              disabled={operatorReplyMutation.isPending}
-            />
-            <Button
-              type="submit"
-              size="sm"
-              disabled={!operatorInput.trim() || operatorReplyMutation.isPending}
-              className="bg-amber-500 hover:bg-amber-600 text-white border-0"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </form>
+
+            <form onSubmit={handleOperatorSend} className="flex gap-2">
+              <div className="flex items-center gap-2 mr-2 shrink-0">
+                <Headset className="h-4 w-4 text-amber-600" />
+                <span className="text-xs font-medium text-amber-700">Operator</span>
+              </div>
+              <Textarea
+                value={operatorInput}
+                onChange={(e) => setOperatorInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleOperatorSend(e);
+                  }
+                }}
+                placeholder="Mijozga xabar yozing... (Shift+Enter - yangi qator)"
+                className="flex-1 bg-white border-amber-200 focus-visible:ring-amber-400 min-h-[70px] max-h-[140px] text-sm resize-none"
+                disabled={operatorReplyMutation.isPending}
+                rows={2}
+              />
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!operatorInput.trim() || operatorReplyMutation.isPending}
+                className="bg-amber-500 hover:bg-amber-600 text-white border-0 self-end"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
         </div>
       )}
 

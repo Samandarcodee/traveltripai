@@ -2,7 +2,11 @@ import React, { useState } from "react";
 import { useParams, Link } from "wouter";
 import { useGetLead, useUpdateLead, useBookLead } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { ArrowLeft, Save, MapPin, DollarSign, MessageSquare, User, Phone, Mail, CheckCircle2, Plane } from "lucide-react";
+import {
+  ArrowLeft, Save, MapPin, DollarSign, MessageSquare, User, Phone,
+  Mail, CheckCircle2, Plane, Calendar, Luggage, Users, CreditCard,
+  Tag, Gift, Globe, Building2, Hash, Edit3, X
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +16,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const segmentColors: Record<string, string> = {
   hot: "bg-red-100 text-red-700 border-red-200",
@@ -33,6 +34,30 @@ const statusLabels: Record<string, string> = {
   lost: "Yo'qoldi",
 };
 
+type FieldRowProps = {
+  icon?: React.ReactNode;
+  label: string;
+  value?: string | null;
+  editing?: boolean;
+  editEl?: React.ReactNode;
+};
+
+function FieldRow({ icon, label, value, editing, editEl }: FieldRowProps) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+        {icon}
+        {label}
+      </span>
+      {editing && editEl ? (
+        editEl
+      ) : (
+        <p className="text-sm font-medium">{value || <span className="text-muted-foreground/50 text-xs italic">—</span>}</p>
+      )}
+    </div>
+  );
+}
+
 export default function LeadDetail() {
   const params = useParams();
   const id = Number(params.id);
@@ -44,24 +69,51 @@ export default function LeadDetail() {
   const bookMutation = useBookLead();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<any>(null);
+  const [formData, setFormData] = useState<Record<string, any>>({});
   const [bookOpen, setBookOpen] = useState(false);
   const [travelDate, setTravelDate] = useState("");
   const [bookNotes, setBookNotes] = useState("");
 
   React.useEffect(() => {
-    if (lead && !formData) {
+    if (lead && Object.keys(formData).length === 0) {
       setFormData({
+        name: lead.name || "",
+        phone: lead.phone || "",
+        email: lead.email || "",
         status: lead.status,
         segment: lead.segment,
+        destination: lead.destination || "",
+        budget: lead.budget || "",
+        interest: lead.interest || "",
         notes: lead.notes || "",
+        airline: lead.airline || "",
+        flightNumber: lead.flightNumber || "",
+        bookingNumber: lead.bookingNumber || "",
+        departureDate: lead.departureDate || "",
+        arrivalDate: lead.arrivalDate || "",
+        luggage: lead.luggage || "",
+        handLuggage: lead.handLuggage || "",
+        tariff: lead.tariff || "",
+        passengersCount: lead.passengersCount || "",
+        serviceClass: lead.serviceClass || "",
+        paymentStatus: lead.paymentStatus || "",
+        ageCategory: lead.ageCategory || "",
+        leadSource: lead.leadSource || "",
+        birthday: lead.birthday || "",
+        assignedTo: lead.assignedTo || "",
       });
     }
   }, [lead]);
 
+  const setField = (key: string, val: string) => setFormData((prev: Record<string, any>) => ({ ...prev, [key]: val }));
+
   const handleSave = () => {
+    const toSend: Record<string, any> = { ...formData };
+    Object.keys(toSend).forEach((k) => {
+      if (toSend[k] === "") toSend[k] = null;
+    });
     updateMutation.mutate(
-      { id, data: formData },
+      { id, data: toSend as any },
       {
         onSuccess: (data) => {
           queryClient.setQueryData([`/api/leads/${id}`], data);
@@ -83,8 +135,8 @@ export default function LeadDetail() {
           queryClient.setQueryData([`/api/leads/${id}`], data);
           setBookOpen(false);
           toast({
-            title: "Bron tasdiqlandi! ✈️",
-            description: `${lead?.name ?? "Mijoz"} broni muvaffaqiyatli tasdiqlandi. Tasdiqlash xabari yuborildi.`,
+            title: "Bron tasdiqlandi!",
+            description: `${lead?.name ?? "Mijoz"} broni muvaffaqiyatli tasdiqlandi.`,
           });
         },
         onError: () => {
@@ -97,21 +149,30 @@ export default function LeadDetail() {
   if (isLoading) return <div className="p-8 text-center animate-pulse">Yuklanmoqda...</div>;
   if (!lead) return <div className="p-8 text-center">Lid topilmadi</div>;
 
+  const f = formData;
+
   return (
-    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between mb-2">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <Link href="/leads">
           <Button variant="ghost" size="sm" className="-ml-3 text-muted-foreground">
             <ArrowLeft className="w-4 h-4 mr-2" /> Lidlarga qaytish
           </Button>
         </Link>
         <div className="flex items-center gap-2">
+          {lead.conversationId && (
+            <Link href={`/conversations/${lead.conversationId}`}>
+              <Button variant="outline" size="sm" className="text-xs gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5" /> Suhbat
+              </Button>
+            </Link>
+          )}
           {lead.status !== "booked" && lead.status !== "lost" && (
             <Dialog open={bookOpen} onOpenChange={setBookOpen}>
               <DialogTrigger asChild>
-                <Button variant="default" size="sm" className="gap-2 bg-green-600 hover:bg-green-700">
-                  <Plane className="w-4 h-4" />
-                  Bron Tasdiqlash
+                <Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white text-xs">
+                  <Plane className="w-3.5 h-3.5" /> Bron Tasdiqlash
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
@@ -124,11 +185,7 @@ export default function LeadDetail() {
                   </p>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Sayohat sanasi (ixtiyoriy)</label>
-                    <Input
-                      type="date"
-                      value={travelDate}
-                      onChange={(e) => setTravelDate(e.target.value)}
-                    />
+                    <Input type="date" value={travelDate} onChange={(e) => setTravelDate(e.target.value)} />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Izoh (ixtiyoriy)</label>
@@ -140,164 +197,350 @@ export default function LeadDetail() {
                     />
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" className="flex-1" onClick={() => setBookOpen(false)}>
-                      Bekor qilish
-                    </Button>
-                    <Button
-                      className="flex-1 bg-green-600 hover:bg-green-700 gap-2"
-                      onClick={handleBook}
-                      disabled={bookMutation.isPending}
-                    >
+                    <Button variant="outline" className="flex-1" onClick={() => setBookOpen(false)}>Bekor qilish</Button>
+                    <Button className="flex-1 bg-green-600 hover:bg-green-700 gap-2" onClick={handleBook} disabled={bookMutation.isPending}>
                       <CheckCircle2 className="w-4 h-4" />
-                      {bookMutation.isPending ? "Tasdiqlanmoqda..." : "Tasdiqlash"}
+                      {bookMutation.isPending ? "..." : "Tasdiqlash"}
                     </Button>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
           )}
-
           {isEditing ? (
             <>
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>Bekor qilish</Button>
-              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
-                <Save className="w-4 h-4 mr-2" /> Saqlash
+              <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="text-xs gap-1">
+                <X className="w-3 h-3" /> Bekor
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending} className="text-xs gap-1">
+                <Save className="w-3.5 h-3.5" />
+                {updateMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
               </Button>
             </>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-              Tahrirlash
+            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="text-xs gap-1">
+              <Edit3 className="w-3.5 h-3.5" /> Tahrirlash
             </Button>
           )}
         </div>
       </div>
 
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">{lead.name || "Noma'lum Lid"}</h1>
-          <div className="flex flex-wrap gap-2 items-center">
-            {isEditing ? (
-              <Select value={formData?.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
-                <SelectTrigger className="w-[140px] h-8 text-xs">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="new">Yangi</SelectItem>
-                  <SelectItem value="contacted">Bog'lanildi</SelectItem>
-                  <SelectItem value="qualified">Malakali</SelectItem>
-                  <SelectItem value="booked">Bron qilindi</SelectItem>
-                  <SelectItem value="lost">Yo'qoldi</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Badge className={lead.status === "booked" ? "bg-green-100 text-green-700 border-green-200 capitalize" : "capitalize"}>
-                {statusLabels[lead.status] ?? lead.status}
-              </Badge>
-            )}
-
-            {isEditing ? (
-              <Select value={formData?.segment} onValueChange={(v) => setFormData({ ...formData, segment: v })}>
-                <SelectTrigger className="w-[120px] h-8 text-xs">
-                  <SelectValue placeholder="Segment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hot">Issiq</SelectItem>
-                  <SelectItem value="warm">Iliq</SelectItem>
-                  <SelectItem value="cold">Sovuq</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Badge variant="outline" className={`capitalize ${segmentColors[lead.segment] ?? ""}`}>
-                {lead.segment === "hot" ? "Issiq" : lead.segment === "warm" ? "Iliq" : "Sovuq"}
-              </Badge>
-            )}
-            <span className="text-xs text-muted-foreground">
-              {format(new Date(lead.createdAt), "PPP")} da qo'shilgan
-            </span>
-          </div>
+      {/* Title & Status */}
+      <div>
+        <h1 className="text-2xl font-bold mb-2">
+          {isEditing ? (
+            <Input value={f.name} onChange={(e) => setField("name", e.target.value)} className="text-xl font-bold h-10 max-w-xs" />
+          ) : (
+            lead.name || "Noma'lum Lid"
+          )}
+        </h1>
+        <div className="flex flex-wrap gap-2 items-center">
+          {isEditing ? (
+            <Select value={f.status} onValueChange={(v) => setField("status", v)}>
+              <SelectTrigger className="w-[140px] h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new">Yangi</SelectItem>
+                <SelectItem value="contacted">Bog'lanildi</SelectItem>
+                <SelectItem value="qualified">Malakali</SelectItem>
+                <SelectItem value="booked">Bron qilindi</SelectItem>
+                <SelectItem value="lost">Yo'qoldi</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge className={lead.status === "booked" ? "bg-green-100 text-green-700 border-green-200" : ""}>
+              {statusLabels[lead.status] ?? lead.status}
+            </Badge>
+          )}
+          {isEditing ? (
+            <Select value={f.segment} onValueChange={(v) => setField("segment", v)}>
+              <SelectTrigger className="w-[110px] h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hot">Issiq</SelectItem>
+                <SelectItem value="warm">Iliq</SelectItem>
+                <SelectItem value="cold">Sovuq</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge variant="outline" className={`${segmentColors[lead.segment] ?? ""}`}>
+              {lead.segment === "hot" ? "Issiq" : lead.segment === "warm" ? "Iliq" : "Sovuq"}
+            </Badge>
+          )}
+          <span className="text-xs text-muted-foreground">
+            {format(new Date(lead.createdAt), "d MMM yyyy")} da qo'shilgan
+          </span>
         </div>
-
-        {lead.conversationId && (
-          <Link href={`/conversations/${lead.conversationId}`}>
-            <Button variant="secondary" size="sm">
-              <MessageSquare className="w-4 h-4 mr-2" /> Suhbatni ko'rish
-            </Button>
-          </Link>
-        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-        <Card className="md:col-span-2 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Sayohat Ma'lumotlari</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                  <MapPin className="w-3 h-3" /> Yo'nalish
-                </span>
-                <p className="font-medium">{lead.destination || "Ko'rsatilmagan"}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                  <DollarSign className="w-3 h-3" /> Budjet
-                </span>
-                <p className="font-medium">{lead.budget || "Ko'rsatilmagan"}</p>
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase">Qiziqish</span>
-                <p className="font-medium">{lead.interest || "Ko'rsatilmagan"}</p>
-              </div>
-            </div>
+      <Tabs defaultValue="main" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="main">Asosiy</TabsTrigger>
+          <TabsTrigger value="flight">Aviabilet</TabsTrigger>
+          <TabsTrigger value="contact">Aloqa</TabsTrigger>
+        </TabsList>
 
-            <div className="pt-4 border-t border-border space-y-2 mt-4">
-              <span className="text-xs font-semibold text-muted-foreground uppercase">Ichki Izohlar</span>
+        {/* --- MAIN TAB --- */}
+        <TabsContent value="main" className="mt-0 space-y-4">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Sayohat Ma'lumotlari</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+              <FieldRow
+                icon={<MapPin className="w-3 h-3" />}
+                label="Yo'nalish"
+                value={lead.destination}
+                editing={isEditing}
+                editEl={<Input value={f.destination} onChange={(e) => setField("destination", e.target.value)} className="h-8 text-sm" placeholder="Dubai, Turkiya..." />}
+              />
+              <FieldRow
+                icon={<DollarSign className="w-3 h-3" />}
+                label="Budjet"
+                value={lead.budget}
+                editing={isEditing}
+                editEl={<Input value={f.budget} onChange={(e) => setField("budget", e.target.value)} className="h-8 text-sm" placeholder="$1000" />}
+              />
+              <FieldRow
+                icon={<Tag className="w-3 h-3" />}
+                label="Qiziqish"
+                value={lead.interest}
+                editing={isEditing}
+                editEl={<Input value={f.interest} onChange={(e) => setField("interest", e.target.value)} className="h-8 text-sm" placeholder="Tur, aviabilet..." />}
+              />
+              <FieldRow
+                icon={<Globe className="w-3 h-3" />}
+                label="Manba"
+                value={lead.leadSource}
+                editing={isEditing}
+                editEl={
+                  <Select value={f.leadSource || "none"} onValueChange={(v) => setField("leadSource", v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanlang" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">—</SelectItem>
+                      <SelectItem value="telegram">Telegram</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="web">Web sayt</SelectItem>
+                      <SelectItem value="phone">Telefon</SelectItem>
+                      <SelectItem value="referral">Tavsiya</SelectItem>
+                    </SelectContent>
+                  </Select>
+                }
+              />
+              <FieldRow
+                icon={<User className="w-3 h-3" />}
+                label="Mas'ul operator"
+                value={lead.assignedTo}
+                editing={isEditing}
+                editEl={<Input value={f.assignedTo} onChange={(e) => setField("assignedTo", e.target.value)} className="h-8 text-sm" placeholder="Ism familiya" />}
+              />
+              <FieldRow
+                icon={<Gift className="w-3 h-3" />}
+                label="Tug'ilgan kun"
+                value={lead.birthday}
+                editing={isEditing}
+                editEl={<Input type="date" value={f.birthday} onChange={(e) => setField("birthday", e.target.value)} className="h-8 text-sm" />}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Ichki Izoh</CardTitle>
+            </CardHeader>
+            <CardContent>
               {isEditing ? (
                 <Textarea
-                  value={formData?.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="min-h-[120px]"
-                  placeholder="Lid haqida izoh qo'shing..."
+                  value={f.notes}
+                  onChange={(e) => setField("notes", e.target.value)}
+                  className="min-h-[110px] text-sm"
+                  placeholder="Mijoz haqida qo'shimcha ma'lumot..."
                 />
               ) : (
-                <div className="bg-muted/50 p-4 rounded-md text-sm whitespace-pre-wrap min-h-[100px]">
+                <div className="bg-muted/40 p-3 rounded-md text-sm whitespace-pre-wrap min-h-[80px] text-muted-foreground">
                   {lead.notes || "Hali izoh yo'q."}
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Aloqa Ma'lumotlari</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-3">
-              <User className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-              <div className="break-all">
-                <span className="text-xs text-muted-foreground block">Ism</span>
-                <span className="font-medium">{lead.name || "N/A"}</span>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Phone className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-              <div className="break-all">
-                <span className="text-xs text-muted-foreground block">Telefon</span>
-                <span className="font-medium">{lead.phone || "N/A"}</span>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Mail className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-              <div className="break-all">
-                <span className="text-xs text-muted-foreground block">Email</span>
-                <span className="font-medium">{lead.email || "N/A"}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        {/* --- FLIGHT TAB --- */}
+        <TabsContent value="flight" className="mt-0">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Plane className="w-4 h-4 text-primary" /> Aviabilet Ma'lumotlari
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+              <FieldRow
+                icon={<Building2 className="w-3 h-3" />}
+                label="Aviakompaniya"
+                value={lead.airline}
+                editing={isEditing}
+                editEl={<Input value={f.airline} onChange={(e) => setField("airline", e.target.value)} className="h-8 text-sm" placeholder="Uzbekistan Airways" />}
+              />
+              <FieldRow
+                icon={<Hash className="w-3 h-3" />}
+                label="Reys raqami"
+                value={lead.flightNumber}
+                editing={isEditing}
+                editEl={<Input value={f.flightNumber} onChange={(e) => setField("flightNumber", e.target.value)} className="h-8 text-sm" placeholder="HY-701" />}
+              />
+              <FieldRow
+                icon={<Hash className="w-3 h-3" />}
+                label="Bron raqami"
+                value={lead.bookingNumber}
+                editing={isEditing}
+                editEl={<Input value={f.bookingNumber} onChange={(e) => setField("bookingNumber", e.target.value)} className="h-8 text-sm" placeholder="ABCD12" />}
+              />
+              <FieldRow
+                icon={<Calendar className="w-3 h-3" />}
+                label="Jo'nash sanasi"
+                value={lead.departureDate}
+                editing={isEditing}
+                editEl={<Input value={f.departureDate} onChange={(e) => setField("departureDate", e.target.value)} className="h-8 text-sm" placeholder="2025-05-10 10:00" />}
+              />
+              <FieldRow
+                icon={<Calendar className="w-3 h-3" />}
+                label="Kelish sanasi"
+                value={lead.arrivalDate}
+                editing={isEditing}
+                editEl={<Input value={f.arrivalDate} onChange={(e) => setField("arrivalDate", e.target.value)} className="h-8 text-sm" placeholder="2025-05-20 18:00" />}
+              />
+              <FieldRow
+                icon={<Users className="w-3 h-3" />}
+                label="Yo'lovchilar soni"
+                value={lead.passengersCount}
+                editing={isEditing}
+                editEl={<Input type="number" min={1} value={f.passengersCount} onChange={(e) => setField("passengersCount", e.target.value)} className="h-8 text-sm" placeholder="2" />}
+              />
+              <FieldRow
+                icon={<Luggage className="w-3 h-3" />}
+                label="Bagaj"
+                value={lead.luggage}
+                editing={isEditing}
+                editEl={<Input value={f.luggage} onChange={(e) => setField("luggage", e.target.value)} className="h-8 text-sm" placeholder="23 kg" />}
+              />
+              <FieldRow
+                icon={<Luggage className="w-3 h-3" />}
+                label="Qo'l yukli"
+                value={lead.handLuggage}
+                editing={isEditing}
+                editEl={<Input value={f.handLuggage} onChange={(e) => setField("handLuggage", e.target.value)} className="h-8 text-sm" placeholder="8 kg" />}
+              />
+              <FieldRow
+                icon={<Tag className="w-3 h-3" />}
+                label="Tarif"
+                value={lead.tariff}
+                editing={isEditing}
+                editEl={
+                  <Select value={f.tariff || "none"} onValueChange={(v) => setField("tariff", v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanlang" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">—</SelectItem>
+                      <SelectItem value="economy">Economy</SelectItem>
+                      <SelectItem value="comfort">Comfort</SelectItem>
+                      <SelectItem value="business">Business</SelectItem>
+                      <SelectItem value="first">First Class</SelectItem>
+                    </SelectContent>
+                  </Select>
+                }
+              />
+              <FieldRow
+                icon={<Tag className="w-3 h-3" />}
+                label="Xizmat sinfi"
+                value={lead.serviceClass}
+                editing={isEditing}
+                editEl={
+                  <Select value={f.serviceClass || "none"} onValueChange={(v) => setField("serviceClass", v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanlang" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">—</SelectItem>
+                      <SelectItem value="economy">Economy (Y)</SelectItem>
+                      <SelectItem value="business">Business (C)</SelectItem>
+                      <SelectItem value="first">First (F)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                }
+              />
+              <FieldRow
+                icon={<CreditCard className="w-3 h-3" />}
+                label="To'lov holati"
+                value={lead.paymentStatus}
+                editing={isEditing}
+                editEl={
+                  <Select value={f.paymentStatus || "none"} onValueChange={(v) => setField("paymentStatus", v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanlang" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">—</SelectItem>
+                      <SelectItem value="pending">To'lanmagan</SelectItem>
+                      <SelectItem value="partial">Qisman to'langan</SelectItem>
+                      <SelectItem value="paid">To'langan</SelectItem>
+                    </SelectContent>
+                  </Select>
+                }
+              />
+              <FieldRow
+                icon={<Users className="w-3 h-3" />}
+                label="Yosh toifasi"
+                value={lead.ageCategory}
+                editing={isEditing}
+                editEl={
+                  <Select value={f.ageCategory || "none"} onValueChange={(v) => setField("ageCategory", v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tanlang" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">—</SelectItem>
+                      <SelectItem value="adult">Katta yoshli</SelectItem>
+                      <SelectItem value="child">Bola (2-12)</SelectItem>
+                      <SelectItem value="infant">Chaqaloq (0-2)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                }
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* --- CONTACT TAB --- */}
+        <TabsContent value="contact" className="mt-0">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Aloqa Ma'lumotlari</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+              <FieldRow
+                icon={<User className="w-3 h-3" />}
+                label="Ism"
+                value={lead.name}
+                editing={isEditing}
+                editEl={<Input value={f.name} onChange={(e) => setField("name", e.target.value)} className="h-8 text-sm" />}
+              />
+              <FieldRow
+                icon={<Phone className="w-3 h-3" />}
+                label="Telefon"
+                value={lead.phone}
+                editing={isEditing}
+                editEl={<Input value={f.phone} onChange={(e) => setField("phone", e.target.value)} className="h-8 text-sm" placeholder="+998901234567" />}
+              />
+              <FieldRow
+                icon={<Mail className="w-3 h-3" />}
+                label="Email"
+                value={lead.email}
+                editing={isEditing}
+                editEl={<Input value={f.email} onChange={(e) => setField("email", e.target.value)} className="h-8 text-sm" placeholder="email@gmail.com" />}
+              />
+              <FieldRow
+                icon={<Gift className="w-3 h-3" />}
+                label="Tug'ilgan kun"
+                value={lead.birthday}
+                editing={isEditing}
+                editEl={<Input type="date" value={f.birthday} onChange={(e) => setField("birthday", e.target.value)} className="h-8 text-sm" />}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

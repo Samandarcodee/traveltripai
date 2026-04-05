@@ -420,6 +420,88 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: List all message templates
+      responses:
+        "200":
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+    post:
+      operationId: createTemplate
+      tags: [templates]
+      summary: Create a message template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTemplateBody"
+      responses:
+        "201":
+          description: Created template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+
+  /templates/{id}:
+    patch:
+      operationId: updateTemplate
+      tags: [templates]
+      summary: Update a template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTemplateBody"
+      responses:
+        "200":
+          description: Updated template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteTemplate
+      tags: [templates]
+      summary: Delete a template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /call-analysis:
     post:
       operationId: analyzeCall
@@ -712,6 +794,36 @@ components:
           type: ["string", "null"]
         conversationId:
           type: ["integer", "null"]
+        airline:
+          type: ["string", "null"]
+        flightNumber:
+          type: ["string", "null"]
+        bookingNumber:
+          type: ["string", "null"]
+        departureDate:
+          type: ["string", "null"]
+        arrivalDate:
+          type: ["string", "null"]
+        luggage:
+          type: ["string", "null"]
+        handLuggage:
+          type: ["string", "null"]
+        tariff:
+          type: ["string", "null"]
+        passengersCount:
+          type: ["string", "null"]
+        serviceClass:
+          type: ["string", "null"]
+        paymentStatus:
+          type: ["string", "null"]
+        ageCategory:
+          type: ["string", "null"]
+        leadSource:
+          type: ["string", "null"]
+        birthday:
+          type: ["string", "null"]
+        assignedTo:
+          type: ["string", "null"]
         createdAt:
           type: string
         updatedAt:
@@ -782,6 +894,36 @@ components:
           type: string
           enum: [new, contacted, qualified, booked, lost]
         notes:
+          type: ["string", "null"]
+        airline:
+          type: ["string", "null"]
+        flightNumber:
+          type: ["string", "null"]
+        bookingNumber:
+          type: ["string", "null"]
+        departureDate:
+          type: ["string", "null"]
+        arrivalDate:
+          type: ["string", "null"]
+        luggage:
+          type: ["string", "null"]
+        handLuggage:
+          type: ["string", "null"]
+        tariff:
+          type: ["string", "null"]
+        passengersCount:
+          type: ["string", "null"]
+        serviceClass:
+          type: ["string", "null"]
+        paymentStatus:
+          type: ["string", "null"]
+        ageCategory:
+          type: ["string", "null"]
+        leadSource:
+          type: ["string", "null"]
+        birthday:
+          type: ["string", "null"]
+        assignedTo:
           type: ["string", "null"]
 
     BookLeadBody:
@@ -986,3 +1128,41 @@ components:
         - messages
         - leads
         - bookings
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - category
+        - title
+        - content
+        - sortOrder
+        - createdAt
+
+    CreateTemplateBody:
+      type: object
+      properties:
+        category:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        sortOrder:
+          type: integer
+      required:
+        - title
+        - content
