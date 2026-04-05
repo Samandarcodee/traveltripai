@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
@@ -16,42 +16,83 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
+import { useListConversations } from "@workspace/api-client-react";
 
-const NAV_SECTIONS = [
-  {
-    label: "Главное",
-    items: [
-      { href: "/", label: "Дашборд", icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: "Продажи",
-    items: [
-      { href: "/conversations", label: "Диалоги", icon: MessageSquare },
-      { href: "/pipeline", label: "Воронка", icon: Kanban },
-      { href: "/leads", label: "Лиды (CRM)", icon: Briefcase },
-      { href: "/promotions", label: "Промо / Акции", icon: Tag },
-      { href: "/templates", label: "Шаблоны", icon: FileText },
-    ],
-  },
-  {
-    label: "Аналитика",
-    items: [
-      { href: "/stats", label: "Статистика", icon: BarChart3 },
-      { href: "/call-analysis", label: "Анализ звонков", icon: PhoneCall },
-    ],
-  },
-  {
-    label: "Система",
-    items: [
-      { href: "/chat", label: "AI Чат", icon: Bot },
-      { href: "/settings", label: "Настройки", icon: Settings2 },
-    ],
-  },
-];
+function playNotificationBeep() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  } catch {}
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+
+  const { data: activeConvs } = useListConversations(
+    { status: "active" },
+    { query: { refetchInterval: 8000 } }
+  );
+
+  const prevCountRef = useRef<number | null>(null);
+  const isFirstLoad = useRef(true);
+
+  useEffect(() => {
+    const count = activeConvs?.length ?? 0;
+    if (isFirstLoad.current) {
+      prevCountRef.current = count;
+      isFirstLoad.current = false;
+      return;
+    }
+    if (prevCountRef.current !== null && count > prevCountRef.current) {
+      playNotificationBeep();
+    }
+    prevCountRef.current = count;
+  }, [activeConvs?.length]);
+
+  const activeCount = activeConvs?.length ?? 0;
+
+  const NAV_SECTIONS = [
+    {
+      label: "Главное",
+      items: [
+        { href: "/", label: "Дашборд", icon: LayoutDashboard, badge: null },
+      ],
+    },
+    {
+      label: "Продажи",
+      items: [
+        { href: "/conversations", label: "Диалоги", icon: MessageSquare, badge: activeCount > 0 ? activeCount : null },
+        { href: "/pipeline", label: "Воронка", icon: Kanban, badge: null },
+        { href: "/leads", label: "Лиды (CRM)", icon: Briefcase, badge: null },
+        { href: "/promotions", label: "Промо / Акции", icon: Tag, badge: null },
+        { href: "/templates", label: "Шаблоны", icon: FileText, badge: null },
+      ],
+    },
+    {
+      label: "Аналитика",
+      items: [
+        { href: "/stats", label: "Статистика", icon: BarChart3, badge: null },
+        { href: "/call-analysis", label: "Анализ звонков", icon: PhoneCall, badge: null },
+      ],
+    },
+    {
+      label: "Система",
+      items: [
+        { href: "/chat", label: "AI Чат", icon: Bot, badge: null },
+        { href: "/settings", label: "Настройки", icon: Settings2, badge: null },
+      ],
+    },
+  ];
 
   const NavLinks = () => (
     <>
@@ -89,7 +130,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       }`}
                     >
                       <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
-                      {item.label}
+                      <span className="flex-1">{item.label}</span>
+                      {item.badge !== null && (
+                        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+                          {item.badge}
+                        </span>
+                      )}
                     </span>
                   </Link>
                 );

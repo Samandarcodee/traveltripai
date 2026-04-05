@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { useListLeads, useCreateLead } from "@workspace/api-client-react";
+import { useListLeads, useCreateLead, useUpdateLead } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import {
   Users, Filter, Plus, Search, Phone, MapPin, X, Save,
   DollarSign, User, AlertTriangle, Send, CheckSquare, Square,
-  Megaphone, Clock,
+  Megaphone, Clock, Download, ChevronDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -181,6 +181,55 @@ export default function Leads() {
     }
   };
 
+  const updateLeadMutation = useUpdateLead();
+
+  const handleQuickStatus = (leadId: number, newStatus: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateLeadMutation.mutate(
+      { id: leadId, data: { status: newStatus as any } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+          toast({ title: "Статус обновлён", description: statusLabels[newStatus] ?? newStatus });
+        },
+      }
+    );
+  };
+
+  const downloadCSV = () => {
+    const rows = (filtered ?? []).map((l) => ({
+      Имя: l.name ?? "",
+      Телефон: l.phone ?? "",
+      Статус: statusLabels[l.status] ?? l.status,
+      Сегмент: segmentLabels[l.segment] ?? l.segment,
+      Направление: l.destination ?? "",
+      Бюджет: l.budget ?? "",
+      Дата: format(new Date(l.createdAt), "d MMM yyyy", { locale: ru }),
+    }));
+    const headers = Object.keys(rows[0] ?? {});
+    const csvContent =
+      "\ufeff" +
+      [headers, ...rows.map((r) => headers.map((h) => `"${(r as any)[h]}"`))]
+        .map((row) => row.join(","))
+        .join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `leads_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const QUICK_STATUSES = [
+    { value: "new", label: "Новый", color: "bg-slate-100 text-slate-700 hover:bg-slate-200" },
+    { value: "contacted", label: "Связались", color: "bg-blue-100 text-blue-700 hover:bg-blue-200" },
+    { value: "qualified", label: "Квалиф.", color: "bg-purple-100 text-purple-700 hover:bg-purple-200" },
+    { value: "booked", label: "Бронь", color: "bg-green-100 text-green-700 hover:bg-green-200" },
+    { value: "lost", label: "Потерян", color: "bg-red-100 text-red-700 hover:bg-red-200" },
+  ];
+
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto flex flex-col h-full space-y-6 overflow-y-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -207,6 +256,9 @@ export default function Leads() {
           </Select>
           <Button variant="outline" onClick={() => { setBulkOpen(true); setSelectedIds(new Set()); }} className="gap-2 h-9">
             <Megaphone className="w-4 h-4" /> Рассылка
+          </Button>
+          <Button variant="outline" onClick={downloadCSV} className="gap-2 h-9" disabled={filtered.length === 0}>
+            <Download className="w-4 h-4" /> Экспорт
           </Button>
           <Button onClick={() => setCreateOpen(true)} className="gap-2 h-9">
             <Plus className="w-4 h-4" /> Новый лид
@@ -246,10 +298,13 @@ export default function Leads() {
               const rotting = isRotting(lead);
               const daysAgo = Math.floor(daysSince(lead.updatedAt));
               return (
-                <Link key={lead.id} href={`/leads/${lead.id}`} className="block group">
-                  <div className={`bg-card border hover:shadow-md transition-all p-4 rounded-xl h-full flex flex-col gap-3 ${
+                <div
+                  key={lead.id}
+                  className={`group bg-card border hover:shadow-md transition-all rounded-xl flex flex-col ${
                     rotting ? "border-orange-300 hover:border-orange-400" : "hover:border-primary/50"
-                  }`}>
+                  }`}
+                >
+                  <Link href={`/leads/${lead.id}`} className="block p-4 flex-1">
                     <div className="flex items-start gap-3">
                       <div className={`w-10 h-10 rounded-full ${getAvatarColor(lead.name)} flex items-center justify-center text-white font-bold text-sm shrink-0`}>
                         {getInitials(lead.name)}
@@ -275,7 +330,7 @@ export default function Leads() {
                       </div>
                     </div>
 
-                    <div className="space-y-1 pl-[52px]">
+                    <div className="space-y-1 pl-[52px] mt-3">
                       {lead.phone && (
                         <div className="flex items-center text-xs text-muted-foreground gap-1.5">
                           <Phone className="w-3 h-3 shrink-0" />
@@ -289,8 +344,10 @@ export default function Leads() {
                         </div>
                       )}
                     </div>
+                  </Link>
 
-                    <div className="flex items-center justify-between pt-2.5 border-t mt-auto">
+                  <div className="px-4 pb-3 pt-2 border-t">
+                    <div className="flex items-center justify-between group-hover:hidden">
                       <Badge className={`text-[10px] font-medium ${statusColors[lead.status] ?? ""}`} variant="secondary">
                         {statusLabels[lead.status] ?? lead.status}
                       </Badge>
@@ -302,8 +359,21 @@ export default function Leads() {
                         }
                       </div>
                     </div>
+                    <div className="hidden group-hover:flex items-center gap-1 flex-wrap">
+                      {QUICK_STATUSES.map((s) => (
+                        <button
+                          key={s.value}
+                          onClick={(e) => handleQuickStatus(lead.id, s.value, e)}
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors border border-transparent ${s.color} ${
+                            lead.status === s.value ? "ring-1 ring-offset-1 ring-current" : ""
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
