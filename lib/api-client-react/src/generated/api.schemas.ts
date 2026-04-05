@@ -516,10 +516,11 @@ export interface AppSettings {
   /** @nullable */
   telegramBotToken?: string | null;
   /** @nullable */
-  telegramWebhookUrl?: string | null;
-  /** @nullable */
   telegramBotUsername?: string | null;
-  telegramConnected: boolean;
+  telegramBotConnected: boolean;
+  /** @nullable */
+  telegramAccountPhone?: string | null;
+  telegramAccountConnected: boolean;
   /** @nullable */
   operatorName?: string | null;
   /** @nullable */
@@ -530,11 +531,33 @@ export interface UpdateSettingsBody {
   /** @nullable */
   telegramBotToken?: string | null;
   /** @nullable */
-  telegramWebhookUrl?: string | null;
-  /** @nullable */
   operatorName?: string | null;
   /** @nullable */
   companyName?: string | null;
+}
+
+export interface TelegramConnectBody {
+  phone: string;
+  apiId: number;
+  apiHash: string;
+}
+
+export type TelegramAuthResultStatus =
+  (typeof TelegramAuthResultStatus)[keyof typeof TelegramAuthResultStatus];
+
+export const TelegramAuthResultStatus = {
+  code_sent: "code_sent",
+  connected: "connected",
+  need_password: "need_password",
+  error: "error",
+} as const;
+
+export interface TelegramAuthResult {
+  status: TelegramAuthResultStatus;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  error?: string | null;
 }
 
 export interface TelegramTestResult {
@@ -686,3 +709,15 @@ export const GetTimeSeriesPeriod = {
   weekly: "weekly",
   monthly: "monthly",
 } as const;
+
+export type TelegramAccountVerifyBody = {
+  code: string;
+};
+
+export type TelegramAccountVerify2faBody = {
+  password: string;
+};
+
+export type TelegramAccountDisconnect200 = {
+  ok: boolean;
+};

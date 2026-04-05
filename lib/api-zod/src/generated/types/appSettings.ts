@@ -10,10 +10,11 @@ export interface AppSettings {
   /** @nullable */
   telegramBotToken?: string | null;
   /** @nullable */
-  telegramWebhookUrl?: string | null;
-  /** @nullable */
   telegramBotUsername?: string | null;
-  telegramConnected: boolean;
+  telegramBotConnected: boolean;
+  /** @nullable */
+  telegramAccountPhone?: string | null;
+  telegramAccountConnected: boolean;
   /** @nullable */
   operatorName?: string | null;
   /** @nullable */

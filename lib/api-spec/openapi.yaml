@@ -622,6 +622,88 @@ paths:
               schema:
                 $ref: "#/components/schemas/TelegramTestResult"
 
+  /telegram/account/connect:
+    post:
+      operationId: telegramAccountConnect
+      tags: [settings]
+      summary: Start Telegram account auth (send code)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelegramConnectBody"
+      responses:
+        "200":
+          description: Auth step result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramAuthResult"
+
+  /telegram/account/verify:
+    post:
+      operationId: telegramAccountVerify
+      tags: [settings]
+      summary: Verify Telegram OTP code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+              required: [code]
+      responses:
+        "200":
+          description: Auth step result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramAuthResult"
+
+  /telegram/account/verify-2fa:
+    post:
+      operationId: telegramAccountVerify2fa
+      tags: [settings]
+      summary: Verify Telegram 2FA password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+              required: [password]
+      responses:
+        "200":
+          description: Auth step result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramAuthResult"
+
+  /telegram/account:
+    delete:
+      operationId: telegramAccountDisconnect
+      tags: [settings]
+      summary: Disconnect Telegram account
+      responses:
+        "200":
+          description: Disconnected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
   /leads/{leadId}/tasks:
     get:
       operationId: listLeadTasks
@@ -1301,30 +1383,54 @@ components:
       properties:
         telegramBotToken:
           type: ["string", "null"]
-        telegramWebhookUrl:
-          type: ["string", "null"]
         telegramBotUsername:
           type: ["string", "null"]
-        telegramConnected:
+        telegramBotConnected:
+          type: boolean
+        telegramAccountPhone:
+          type: ["string", "null"]
+        telegramAccountConnected:
           type: boolean
         operatorName:
           type: ["string", "null"]
         companyName:
           type: ["string", "null"]
       required:
-        - telegramConnected
+        - telegramBotConnected
+        - telegramAccountConnected
 
     UpdateSettingsBody:
       type: object
       properties:
         telegramBotToken:
           type: ["string", "null"]
-        telegramWebhookUrl:
-          type: ["string", "null"]
         operatorName:
           type: ["string", "null"]
         companyName:
           type: ["string", "null"]
+
+    TelegramConnectBody:
+      type: object
+      properties:
+        phone:
+          type: string
+        apiId:
+          type: integer
+        apiHash:
+          type: string
+      required: [phone, apiId, apiHash]
+
+    TelegramAuthResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [code_sent, connected, need_password, error]
+        phone:
+          type: ["string", "null"]
+        error:
+          type: ["string", "null"]
+      required: [status]
 
     TelegramTestResult:
       type: object

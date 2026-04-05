@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { db, conversationsTable, messagesTable, leadsTable, activityTable, settingsTable, promotionsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, conversationsTable, messagesTable, settingsTable, promotionsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import * as telegramAccount from "../services/telegram-account.js";
 
 const router: IRouter = Router();
 
@@ -10,7 +11,7 @@ async function getSetting(key: string): Promise<string | null> {
   return row?.value ?? null;
 }
 
-async function sendTelegramMessage(token: string, chatId: string | number, text: string): Promise<void> {
+async function sendBotMessage(token: string, chatId: string | number, text: string): Promise<void> {
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -26,7 +27,7 @@ async function buildSystemPrompt(): Promise<string> {
   const activePromos = await db.select().from(promotionsTable).where(eq(promotionsTable.active, 1)).limit(10);
   if (activePromos.length === 0) return BASE_SYSTEM_PROMPT;
   const promoText = activePromos.map((p) =>
-    `- ${p.title}: ${p.description}${p.discount ? ` (${p.discount})` : ""}${p.destination ? ` [${p.destination}]` : ""}${p.validUntil ? ` — ${p.validUntil} gacha` : ""}`
+    `- ${p.title}: ${p.description}${(p as any).discount ? ` (${(p as any).discount})` : ""}${(p as any).destination ? ` [${(p as any).destination}]` : ""}${(p as any).validUntil ? ` — ${(p as any).validUntil} gacha` : ""}`
   ).join("\n");
   return `${BASE_SYSTEM_PROMPT}\n\nFAOL AKSIYALAR:\n${promoText}`;
 }
@@ -50,25 +51,28 @@ router.post("/telegram/webhook", async (req, res): Promise<void> => {
       if (text === "/start") {
         const token = await getSetting("telegram_bot_token");
         if (token) {
-          await sendTelegramMessage(token, chatId, `Assalomu alaykum! OKSTours AI Agentiga xush kelibsiz. Savolingizni yozing — men yordam beraman! ✈️`);
+          await sendBotMessage(token, chatId, `Assalomu alaykum! OKSTours AI Agentiga xush kelibsiz. Savolingizni yozing — men yordam beraman! ✈️`);
         }
       }
       return;
     }
 
-    let [conversation] = await db.select().from(conversationsTable).where(
-      and(eq(conversationsTable.channel, "telegram"), eq(conversationsTable.externalId, chatId))
+    const { db: _db, conversationsTable: _ct, messagesTable: _mt, leadsTable, activityTable } = await import("@workspace/db");
+    const { and } = await import("drizzle-orm");
+
+    let [conversation] = await _db.select().from(_ct).where(
+      and(eq(_ct.channel, "telegram"), eq(_ct.externalId, chatId))
     );
 
     if (!conversation) {
-      const [lead] = await db.insert(leadsTable).values({
+      const [lead] = await _db.insert(leadsTable).values({
         name: customerName,
         segment: "cold",
         status: "new",
         leadSource: "telegram",
       }).returning();
 
-      const [newConv] = await db.insert(conversationsTable).values({
+      const [newConv] = await _db.insert(_ct).values({
         channel: "telegram",
         status: "active",
         customerName,
@@ -77,35 +81,25 @@ router.post("/telegram/webhook", async (req, res): Promise<void> => {
       }).returning();
       conversation = newConv;
 
-      await db.insert(activityTable).values({
+      await _db.insert(activityTable).values({
         type: "new_lead",
-        description: `Telegram yangi mijoz: ${customerName}`,
+        description: `Telegram bot yangi mijoz: ${customerName}`,
         conversationId: newConv.id,
         leadId: lead.id,
       });
     }
 
     if (conversation.operatorMode === 1) {
-      await db.insert(messagesTable).values({
-        conversationId: conversation.id,
-        role: "user",
-        content: text,
-      });
-      await db.update(conversationsTable)
-        .set({ lastMessage: text, lastMessageAt: new Date() })
-        .where(eq(conversationsTable.id, conversation.id));
+      await _db.insert(_mt).values({ conversationId: conversation.id, role: "user", content: text });
+      await _db.update(_ct).set({ lastMessage: text, lastMessageAt: new Date() }).where(eq(_ct.id, conversation.id));
       return;
     }
 
-    await db.insert(messagesTable).values({
-      conversationId: conversation.id,
-      role: "user",
-      content: text,
-    });
+    await _db.insert(_mt).values({ conversationId: conversation.id, role: "user", content: text });
 
-    const history = await db.select().from(messagesTable)
-      .where(eq(messagesTable.conversationId, conversation.id))
-      .orderBy(messagesTable.createdAt);
+    const history = await _db.select().from(_mt)
+      .where(eq(_mt.conversationId, conversation.id))
+      .orderBy(_mt.createdAt);
 
     const systemPrompt = await buildSystemPrompt();
 
@@ -123,31 +117,65 @@ router.post("/telegram/webhook", async (req, res): Promise<void> => {
 
     const aiReply = completion.choices[0]?.message?.content ?? "Kechirasiz, hozir javob bera olmayapman.";
 
-    await db.insert(messagesTable).values({
-      conversationId: conversation.id,
-      role: "assistant",
-      content: aiReply,
-    });
+    await _db.insert(_mt).values({ conversationId: conversation.id, role: "assistant", content: aiReply });
+    await _db.update(_ct).set({ lastMessage: aiReply, lastMessageAt: new Date() }).where(eq(_ct.id, conversation.id));
 
-    await db.update(conversationsTable)
-      .set({ lastMessage: aiReply, lastMessageAt: new Date() })
-      .where(eq(conversationsTable.id, conversation.id));
-
-    await db.insert(activityTable).values({
+    await _db.insert(activityTable).values({
       type: "new_message",
-      description: `Telegram xabar: ${customerName} — "${text.slice(0, 60)}"`,
+      description: `Telegram bot xabar: ${customerName} — "${text.slice(0, 60)}"`,
       conversationId: conversation.id,
       leadId: conversation.leadId ?? undefined,
     });
 
     const token = await getSetting("telegram_bot_token");
     if (token) {
-      await sendTelegramMessage(token, chatId, aiReply);
+      await sendBotMessage(token, chatId, aiReply);
     }
   } catch (err) {
     console.error("Telegram webhook error:", err);
   }
 });
 
-export { getSetting, sendTelegramMessage };
+router.post("/telegram/account/connect", async (req, res): Promise<void> => {
+  const { phone, apiId, apiHash } = req.body;
+
+  if (!phone || !apiId || !apiHash) {
+    res.status(400).json({ status: "error", error: "phone, apiId va apiHash majburiy" });
+    return;
+  }
+
+  const result = await telegramAccount.startAuth(String(phone).trim(), Number(apiId), String(apiHash).trim());
+  res.json(result);
+});
+
+router.post("/telegram/account/verify", async (req, res): Promise<void> => {
+  const { code } = req.body;
+
+  if (!code) {
+    res.status(400).json({ status: "error", error: "Kod kiritilmagan" });
+    return;
+  }
+
+  const result = await telegramAccount.verifyCode(String(code).trim());
+  res.json(result);
+});
+
+router.post("/telegram/account/verify-2fa", async (req, res): Promise<void> => {
+  const { password } = req.body;
+
+  if (!password) {
+    res.status(400).json({ status: "error", error: "Parol kiritilmagan" });
+    return;
+  }
+
+  const result = await telegramAccount.verify2FA(String(password));
+  res.json(result);
+});
+
+router.delete("/telegram/account", async (_req, res): Promise<void> => {
+  await telegramAccount.disconnectAccount();
+  res.json({ ok: true });
+});
+
+export { getSetting, sendBotMessage as sendTelegramMessage };
 export default router;

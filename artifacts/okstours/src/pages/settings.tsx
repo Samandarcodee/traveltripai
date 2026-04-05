@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { useGetSettings, useUpdateSettings, useTestTelegramBot } from "@workspace/api-client-react";
+import {
+  useGetSettings,
+  useUpdateSettings,
+  useTelegramAccountConnect,
+  useTelegramAccountVerify,
+  useTelegramAccountVerify2fa,
+  useTelegramAccountDisconnect,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,83 +18,136 @@ import {
   Send,
   CheckCircle2,
   XCircle,
-  Eye,
-  EyeOff,
-  ExternalLink,
-  RefreshCcw,
-  Info,
-  Bot,
   Building2,
   User,
-  Webhook,
-  Copy,
-  Check,
+  Phone,
+  KeyRound,
+  ShieldCheck,
+  Loader2,
+  Info,
+  LogOut,
+  ArrowRight,
+  Hash,
 } from "lucide-react";
 
+type AuthStep = "idle" | "entering_phone" | "waiting_code" | "waiting_2fa" | "connected";
+
 export default function Settings() {
-  const { data: settings, isLoading } = useGetSettings();
+  const { data: settings, isLoading, refetch } = useGetSettings();
   const updateMutation = useUpdateSettings();
-  const testMutation = useTestTelegramBot();
+  const connectMutation = useTelegramAccountConnect();
+  const verifyMutation = useTelegramAccountVerify();
+  const verify2faMutation = useTelegramAccountVerify2fa();
+  const disconnectMutation = useTelegramAccountDisconnect();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [tokenInput, setTokenInput] = useState("");
-  const [showToken, setShowToken] = useState(false);
+  const [authStep, setAuthStep] = useState<AuthStep>("idle");
+  const [phone, setPhone] = useState("+998");
+  const [apiId, setApiId] = useState("");
+  const [apiHash, setApiHash] = useState("");
+  const [code, setCode] = useState("");
+  const [twoFaPass, setTwoFaPass] = useState("");
+
   const [operatorName, setOperatorName] = useState("");
   const [companyName, setCompanyName] = useState("");
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (settings) {
       setOperatorName(settings.operatorName ?? "");
       setCompanyName(settings.companyName ?? "");
+      if (settings.telegramAccountConnected) {
+        setAuthStep("connected");
+      }
     }
   }, [settings]);
 
-  const webhookUrl = `${window.location.origin.replace("20738", "8080")}/api/telegram/webhook`;
-  const webhookForDisplay = webhookUrl;
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+    refetch();
+  };
 
-  const handleSaveToken = () => {
-    if (!tokenInput.trim()) {
-      toast({ title: "Xatolik", description: "Bot token kiritilmagan", variant: "destructive" });
+  const handleSendCode = () => {
+    if (!phone.trim() || !apiId.trim() || !apiHash.trim()) {
+      toast({ title: "Xatolik", description: "Barcha maydonlarni to'ldiring", variant: "destructive" });
       return;
     }
-    updateMutation.mutate(
-      { data: { telegramBotToken: tokenInput.trim() } },
+    connectMutation.mutate(
+      { data: { phone: phone.trim(), apiId: parseInt(apiId), apiHash: apiHash.trim() } },
       {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-          setTokenInput("");
-          toast({ title: "Saqlandi", description: "Bot token muvaffaqiyatli saqlandi." });
+        onSuccess: (res) => {
+          if (res.status === "code_sent") {
+            setAuthStep("waiting_code");
+            toast({ title: "Kod yuborildi", description: `${phone} raqamiga Telegram kodi yuborildi` });
+          } else {
+            toast({ title: "Xatolik", description: res.error ?? "Ulanib bo'lmadi", variant: "destructive" });
+          }
+        },
+        onError: () => toast({ title: "Xatolik", description: "Server xatosi", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleVerifyCode = () => {
+    if (!code.trim()) {
+      toast({ title: "Xatolik", description: "Kod kiritilmagan", variant: "destructive" });
+      return;
+    }
+    verifyMutation.mutate(
+      { data: { code: code.trim() } },
+      {
+        onSuccess: (res) => {
+          if (res.status === "connected") {
+            setAuthStep("connected");
+            invalidate();
+            toast({ title: "Ulandi!", description: `Telegram akkaunt muvaffaqiyatli ulandi` });
+          } else if (res.status === "need_password") {
+            setAuthStep("waiting_2fa");
+            toast({ title: "2FA kerak", description: "Telegram 2FA parolingizni kiriting" });
+          } else {
+            toast({ title: "Xatolik", description: res.error ?? "Kod noto'g'ri", variant: "destructive" });
+          }
         },
         onError: () => toast({ title: "Xatolik", variant: "destructive" }),
       }
     );
   };
 
-  const handleTestBot = () => {
-    testMutation.mutate(
-      {},
+  const handleVerify2FA = () => {
+    if (!twoFaPass.trim()) {
+      toast({ title: "Xatolik", description: "Parol kiritilmagan", variant: "destructive" });
+      return;
+    }
+    verify2faMutation.mutate(
+      { data: { password: twoFaPass } },
       {
-        onSuccess: (data) => {
-          if (data.ok) {
-            queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-            toast({ title: "Ulandi!", description: `Bot: @${data.botUsername} (${data.botName})` });
+        onSuccess: (res) => {
+          if (res.status === "connected") {
+            setAuthStep("connected");
+            invalidate();
+            toast({ title: "Ulandi!", description: "Telegram akkaunt muvaffaqiyatli ulandi" });
           } else {
-            toast({ title: "Ulanmadi", description: data.error ?? "Xatolik", variant: "destructive" });
+            toast({ title: "Xatolik", description: res.error ?? "Parol noto'g'ri", variant: "destructive" });
           }
         },
+        onError: () => toast({ title: "Xatolik", variant: "destructive" }),
       }
     );
   };
 
   const handleDisconnect = () => {
-    updateMutation.mutate(
-      { data: { telegramBotToken: null } },
+    disconnectMutation.mutate(
+      {},
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-          toast({ title: "Uzildi", description: "Telegram bot o'chirildi." });
+          setAuthStep("idle");
+          setPhone("+998");
+          setApiId("");
+          setApiHash("");
+          setCode("");
+          setTwoFaPass("");
+          invalidate();
+          toast({ title: "Uzildi", description: "Telegram akkaunt o'chirildi" });
         },
       }
     );
@@ -98,23 +158,19 @@ export default function Settings() {
       { data: { operatorName: operatorName || null, companyName: companyName || null } },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-          toast({ title: "Saqlandi", description: "Sozlamalar yangilandi." });
+          invalidate();
+          toast({ title: "Saqlandi", description: "Sozlamalar yangilandi" });
         },
         onError: () => toast({ title: "Xatolik", variant: "destructive" }),
       }
     );
   };
 
-  const copyWebhook = () => {
-    navigator.clipboard.writeText(webhookForDisplay);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   if (isLoading) {
     return <div className="p-8 text-center animate-pulse text-muted-foreground">Yuklanmoqda...</div>;
   }
+
+  const isConnected = settings?.telegramAccountConnected || authStep === "connected";
 
   return (
     <div className="p-6 md:p-8 max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -123,142 +179,256 @@ export default function Settings() {
           <Settings2 className="h-7 w-7 text-primary" />
           Sozlamalar
         </h1>
-        <p className="text-muted-foreground mt-1">Telegram bot va umumiy tizim sozlamalari.</p>
+        <p className="text-muted-foreground mt-1">Telegram akkaunt va umumiy tizim sozlamalari.</p>
       </div>
 
-      {/* Telegram Integration */}
+      {/* Telegram Account */}
       <Card className="shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Send className="h-5 w-5 text-[#229ED9]" />
-            Telegram Bot Integratsiyasi
-            {settings?.telegramConnected ? (
+            Telegram Akkaunt Integratsiyasi
+            {isConnected ? (
               <Badge className="ml-auto bg-green-100 text-green-700 border-green-200">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                Ulangan
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Ulangan
               </Badge>
             ) : (
               <Badge variant="outline" className="ml-auto text-muted-foreground">
-                <XCircle className="h-3 w-3 mr-1" />
-                Ulanmagan
+                <XCircle className="h-3 w-3 mr-1" /> Ulanmagan
               </Badge>
             )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          {settings?.telegramConnected && (
-            <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <Bot className="h-5 w-5 text-green-600 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-green-800">
-                  @{settings.telegramBotUsername} bilan ulangan
-                </p>
-                <p className="text-xs text-green-600 truncate">Token: {settings.telegramBotToken}</p>
-              </div>
-              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 shrink-0" onClick={handleDisconnect}>
-                Uzish
-              </Button>
-            </div>
-          )}
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Bot Token
-              <a
-                href="https://t.me/BotFather"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-2 text-xs text-primary hover:underline inline-flex items-center gap-0.5"
-              >
-                @BotFather da olish
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            </label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  value={tokenInput}
-                  onChange={(e) => setTokenInput(e.target.value)}
-                  type={showToken ? "text" : "password"}
-                  placeholder="1234567890:ABCdefGHIjklMNOpqrSTUvwxYZ..."
-                  className="pr-10"
-                />
-                <button
-                  onClick={() => setShowToken(!showToken)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          {/* CONNECTED STATE */}
+          {isConnected && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl">
+                <div className="h-10 w-10 rounded-full bg-[#229ED9] flex items-center justify-center shrink-0">
+                  <Send className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-green-800">Telegram akkaunt ulangan</p>
+                  {settings?.telegramAccountPhone && (
+                    <p className="text-xs text-green-600 font-mono">{settings.telegramAccountPhone}</p>
+                  )}
+                  <p className="text-xs text-green-600 mt-0.5">
+                    Telegram xabarlari AI agent orqali avtomatik javob beriladi
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 shrink-0 gap-1.5"
+                  onClick={handleDisconnect}
+                  disabled={disconnectMutation.isPending}
                 >
-                  {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                  <LogOut className="h-3.5 w-3.5" />
+                  Uzish
+                </Button>
               </div>
-              <Button onClick={handleSaveToken} disabled={!tokenInput.trim() || updateMutation.isPending}>
-                Saqlash
-              </Button>
-            </div>
-          </div>
 
-          {settings?.telegramBotToken && (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1 gap-2"
-                onClick={handleTestBot}
-                disabled={testMutation.isPending}
-              >
-                <RefreshCcw className={`h-4 w-4 ${testMutation.isPending ? "animate-spin" : ""}`} />
-                {testMutation.isPending ? "Tekshirilmoqda..." : "Botni tekshirish"}
-              </Button>
+              <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-700">
+                <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>
+                  Akkauntingizga kelgan shaxsiy xabarlar AI agent tomonidan avtomatik javob beriladi.
+                  Suhbatlar panelida "Operator rejimi" ni yoqib, o'zingiz ham javob berishingiz mumkin.
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Webhook setup instructions */}
-          <div className="border rounded-lg overflow-hidden">
-            <div className="bg-muted/40 px-4 py-2.5 flex items-center gap-2 border-b">
-              <Webhook className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Webhook sozlash</span>
-            </div>
-            <div className="p-4 space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Bot token saqlangandan so'ng Telegram webhook ni quyidagi URL ga sozlang:
-              </p>
-              <div className="bg-muted/50 rounded-md p-3 font-mono text-xs break-all flex items-start gap-2">
-                <span className="flex-1 text-foreground">{webhookForDisplay}</span>
-                <button onClick={copyWebhook} className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5">
-                  {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-                </button>
+          {/* STEP 1: PHONE + API CREDENTIALS */}
+          {!isConnected && authStep === "idle" && (
+            <div className="space-y-5">
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 space-y-2">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <Info className="h-4 w-4" /> Boshlashdan oldin
+                </p>
+                <p>
+                  Telegram akkountingizni ulash uchun{" "}
+                  <a
+                    href="https://my.telegram.org/apps"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline font-medium"
+                  >
+                    my.telegram.org/apps
+                  </a>{" "}
+                  saytidan <strong>API ID</strong> va <strong>API Hash</strong> oling.
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Webhook ni o'rnatish yo'llari:</p>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex gap-2 items-start">
-                    <span className="font-bold text-primary shrink-0">1.</span>
-                    <p>
-                      <strong>Avtomatik:</strong> "Botni tekshirish" tugmasini bosganingizda webhook avtomatik o'rnatiladi (agar server public bo'lsa).
-                    </p>
-                  </div>
-                  <div className="flex gap-2 items-start">
-                    <span className="font-bold text-primary shrink-0">2.</span>
-                    <p>
-                      <strong>Qo'lda:</strong> Brauzerda quyidagi URL ni oching:
-                      <code className="block mt-1 text-xs bg-muted p-1.5 rounded break-all">
-                        {`https://api.telegram.org/bot<TOKEN>/setWebhook?url=${webhookForDisplay}`}
-                      </code>
-                    </p>
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium flex items-center gap-1.5">
+                    <Hash className="h-3.5 w-3.5 text-muted-foreground" /> API ID
+                  </label>
+                  <Input
+                    value={apiId}
+                    onChange={(e) => setApiId(e.target.value.replace(/\D/g, ""))}
+                    placeholder="12345678"
+                    type="text"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium flex items-center gap-1.5">
+                    <KeyRound className="h-3.5 w-3.5 text-muted-foreground" /> API Hash
+                  </label>
+                  <Input
+                    value={apiHash}
+                    onChange={(e) => setApiHash(e.target.value)}
+                    placeholder="a1b2c3d4e5f6..."
+                    type="text"
+                  />
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-700">
-            <Info className="h-4 w-4 shrink-0 mt-0.5" />
-            <p>
-              Telegram bot ulangandan so'ng, bot sizga yuborilgan har bir xabarni AI agent orqali avtomatik javob beradi.
-              Suhbatlar panelida "Operator rejimi" ni yoqib, o'zingiz ham javob berishingiz mumkin.
-            </p>
-          </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" /> Telefon raqam
+                </label>
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+998901234567"
+                  type="tel"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Xalqaro format: +998 bilan boshlang
+                </p>
+              </div>
+
+              <Button
+                className="w-full gap-2"
+                onClick={handleSendCode}
+                disabled={connectMutation.isPending || !phone || !apiId || !apiHash}
+              >
+                {connectMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Ulanilmoqda...</>
+                ) : (
+                  <><Send className="h-4 w-4" /> Kod yuborish <ArrowRight className="h-4 w-4 ml-auto" /></>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* STEP 2: ENTER OTP CODE */}
+          {!isConnected && authStep === "waiting_code" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-center space-y-1">
+                <div className="text-2xl">📱</div>
+                <p className="font-semibold text-sm">{phone} raqamiga kod yuborildi</p>
+                <p className="text-xs text-muted-foreground">
+                  Telegram ilovasini oching — u yerda 5 xonali kod bor
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Tasdiqlash kodi</label>
+                <Input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="12345"
+                  maxLength={6}
+                  type="text"
+                  inputMode="numeric"
+                  className="text-center text-xl tracking-[0.5em] font-mono"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setAuthStep("idle")}>
+                  Orqaga
+                </Button>
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={handleVerifyCode}
+                  disabled={verifyMutation.isPending || code.length < 4}
+                >
+                  {verifyMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Tekshirilmoqda...</>
+                  ) : (
+                    <><CheckCircle2 className="h-4 w-4" /> Tasdiqlash</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: 2FA PASSWORD */}
+          {!isConnected && authStep === "waiting_2fa" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl text-center space-y-1">
+                <div className="text-2xl">🔐</div>
+                <p className="font-semibold text-sm">Ikki faktorli autentifikatsiya</p>
+                <p className="text-xs text-muted-foreground">
+                  Telegram akkauntingizda 2FA yoqilgan. Parolingizni kiriting.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" /> 2FA Parol
+                </label>
+                <Input
+                  value={twoFaPass}
+                  onChange={(e) => setTwoFaPass(e.target.value)}
+                  type="password"
+                  placeholder="Parolingiz..."
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setAuthStep("idle")}>
+                  Bekor qilish
+                </Button>
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={handleVerify2FA}
+                  disabled={verify2faMutation.isPending || !twoFaPass}
+                >
+                  {verify2faMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Tekshirilmoqda...</>
+                  ) : (
+                    <><ShieldCheck className="h-4 w-4" /> Kirish</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* How it works */}
+      {!isConnected && authStep === "idle" && (
+        <Card className="border-dashed shadow-none">
+          <CardContent className="py-5">
+            <h3 className="text-sm font-semibold mb-3">Telegram akkaunt qanday ishlaydi?</h3>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              {[
+                "my.telegram.org/apps dan API ID va API Hash oling",
+                "Telefon raqamingizni kiriting — Telegram kodi yuboriladi",
+                "Kodni kiriting — akkaunt ulanadi",
+                "Sizga kelgan shaxsiy xabarlar AI agent orqali javob beriladi",
+                "Suhbatlar panelida barcha muloqotlar ko'rinadi",
+                "Operator rejimida siz ham javob berishingiz mumkin",
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center shrink-0 font-bold mt-0.5">
+                    {i + 1}
+                  </span>
+                  {step}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* General Settings */}
       <Card className="shadow-sm">
@@ -294,30 +464,6 @@ export default function Settings() {
           <Button onClick={handleSaveGeneral} disabled={updateMutation.isPending} className="w-full">
             {updateMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* How Telegram works */}
-      <Card className="border-dashed shadow-none">
-        <CardContent className="py-5">
-          <h3 className="text-sm font-semibold mb-3">Telegram qanday ishlaydi?</h3>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            {[
-              "Foydalanuvchi Telegram botga xabar yozadi",
-              "Telegram xabarni bizning serverga webhook orqali yuboradi",
-              "AI agent xabarni o'qib, javob tayyorlaydi",
-              "Javob Telegram orqali foydalanuvchiga yuboriladi",
-              "Suhbatlar panelida bu muloqot ko'rinadi",
-              "Operator rejimida operator o'zi javob berishi mumkin",
-            ].map((step, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center shrink-0 font-bold mt-0.5">
-                  {i + 1}
-                </span>
-                {step}
-              </div>
-            ))}
-          </div>
         </CardContent>
       </Card>
     </div>

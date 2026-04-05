@@ -10,8 +10,6 @@ export interface UpdateSettingsBody {
   /** @nullable */
   telegramBotToken?: string | null;
   /** @nullable */
-  telegramWebhookUrl?: string | null;
-  /** @nullable */
   operatorName?: string | null;
   /** @nullable */
   companyName?: string | null;

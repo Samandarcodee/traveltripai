@@ -18,45 +18,46 @@ async function setSetting(key: string, value: string | null): Promise<void> {
 
 router.get("/settings", async (_req, res): Promise<void> => {
   const token = await getSetting("telegram_bot_token");
-  const webhookUrl = await getSetting("telegram_webhook_url");
   const botUsername = await getSetting("telegram_bot_username");
+  const telegramPhone = await getSetting("telegram_phone");
+  const telegramConnected = await getSetting("telegram_account_connected");
   const operatorName = await getSetting("operator_name");
   const companyName = await getSetting("company_name");
 
   res.json({
     telegramBotToken: token ? token.slice(0, 6) + "..." + token.slice(-4) : null,
-    telegramWebhookUrl: webhookUrl,
     telegramBotUsername: botUsername,
-    telegramConnected: !!token && !!botUsername,
+    telegramBotConnected: !!token && !!botUsername,
+    telegramAccountPhone: telegramPhone,
+    telegramAccountConnected: telegramConnected === "true",
     operatorName,
     companyName,
   });
 });
 
 router.put("/settings", async (req, res): Promise<void> => {
-  const { telegramBotToken, telegramWebhookUrl, operatorName, companyName } = req.body;
+  const { telegramBotToken, operatorName, companyName } = req.body;
 
   if (telegramBotToken !== undefined) {
     await setSetting("telegram_bot_token", telegramBotToken);
-    if (!telegramBotToken) {
-      await setSetting("telegram_bot_username", null);
-    }
+    if (!telegramBotToken) await setSetting("telegram_bot_username", null);
   }
-  if (telegramWebhookUrl !== undefined) await setSetting("telegram_webhook_url", telegramWebhookUrl);
   if (operatorName !== undefined) await setSetting("operator_name", operatorName);
   if (companyName !== undefined) await setSetting("company_name", companyName);
 
   const token = await getSetting("telegram_bot_token");
-  const webhookUrl = await getSetting("telegram_webhook_url");
   const botUsername = await getSetting("telegram_bot_username");
+  const telegramPhone = await getSetting("telegram_phone");
+  const telegramConnected = await getSetting("telegram_account_connected");
   const opName = await getSetting("operator_name");
   const coName = await getSetting("company_name");
 
   res.json({
     telegramBotToken: token ? token.slice(0, 6) + "..." + token.slice(-4) : null,
-    telegramWebhookUrl: webhookUrl,
     telegramBotUsername: botUsername,
-    telegramConnected: !!token && !!botUsername,
+    telegramBotConnected: !!token && !!botUsername,
+    telegramAccountPhone: telegramPhone,
+    telegramAccountConnected: telegramConnected === "true",
     operatorName: opName,
     companyName: coName,
   });
@@ -76,11 +77,7 @@ router.post("/settings/telegram/test", async (_req, res): Promise<void> => {
 
     if (data.ok) {
       await setSetting("telegram_bot_username", data.result.username);
-      res.json({
-        ok: true,
-        botUsername: data.result.username,
-        botName: data.result.first_name,
-      });
+      res.json({ ok: true, botUsername: data.result.username, botName: data.result.first_name });
     } else {
       res.json({ ok: false, error: data.description ?? "Bot token noto'g'ri" });
     }

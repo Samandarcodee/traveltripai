@@ -42,6 +42,11 @@ import type {
   Promotion,
   SendMessageBody,
   Task,
+  TelegramAccountDisconnect200,
+  TelegramAccountVerify2faBody,
+  TelegramAccountVerifyBody,
+  TelegramAuthResult,
+  TelegramConnectBody,
   TelegramTestResult,
   Template,
   TimeSeriesStats,
@@ -2416,6 +2421,350 @@ export const useTestTelegramBot = <
   TContext
 > => {
   return useMutation(getTestTelegramBotMutationOptions(options));
+};
+
+/**
+ * @summary Start Telegram account auth (send code)
+ */
+export const getTelegramAccountConnectUrl = () => {
+  return `/api/telegram/account/connect`;
+};
+
+export const telegramAccountConnect = async (
+  telegramConnectBody: TelegramConnectBody,
+  options?: RequestInit,
+): Promise<TelegramAuthResult> => {
+  return customFetch<TelegramAuthResult>(getTelegramAccountConnectUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(telegramConnectBody),
+  });
+};
+
+export const getTelegramAccountConnectMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof telegramAccountConnect>>,
+    TError,
+    { data: BodyType<TelegramConnectBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof telegramAccountConnect>>,
+  TError,
+  { data: BodyType<TelegramConnectBody> },
+  TContext
+> => {
+  const mutationKey = ["telegramAccountConnect"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof telegramAccountConnect>>,
+    { data: BodyType<TelegramConnectBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return telegramAccountConnect(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TelegramAccountConnectMutationResult = NonNullable<
+  Awaited<ReturnType<typeof telegramAccountConnect>>
+>;
+export type TelegramAccountConnectMutationBody = BodyType<TelegramConnectBody>;
+export type TelegramAccountConnectMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Start Telegram account auth (send code)
+ */
+export const useTelegramAccountConnect = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof telegramAccountConnect>>,
+    TError,
+    { data: BodyType<TelegramConnectBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof telegramAccountConnect>>,
+  TError,
+  { data: BodyType<TelegramConnectBody> },
+  TContext
+> => {
+  return useMutation(getTelegramAccountConnectMutationOptions(options));
+};
+
+/**
+ * @summary Verify Telegram OTP code
+ */
+export const getTelegramAccountVerifyUrl = () => {
+  return `/api/telegram/account/verify`;
+};
+
+export const telegramAccountVerify = async (
+  telegramAccountVerifyBody: TelegramAccountVerifyBody,
+  options?: RequestInit,
+): Promise<TelegramAuthResult> => {
+  return customFetch<TelegramAuthResult>(getTelegramAccountVerifyUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(telegramAccountVerifyBody),
+  });
+};
+
+export const getTelegramAccountVerifyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof telegramAccountVerify>>,
+    TError,
+    { data: BodyType<TelegramAccountVerifyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof telegramAccountVerify>>,
+  TError,
+  { data: BodyType<TelegramAccountVerifyBody> },
+  TContext
+> => {
+  const mutationKey = ["telegramAccountVerify"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof telegramAccountVerify>>,
+    { data: BodyType<TelegramAccountVerifyBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return telegramAccountVerify(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TelegramAccountVerifyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof telegramAccountVerify>>
+>;
+export type TelegramAccountVerifyMutationBody =
+  BodyType<TelegramAccountVerifyBody>;
+export type TelegramAccountVerifyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Verify Telegram OTP code
+ */
+export const useTelegramAccountVerify = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof telegramAccountVerify>>,
+    TError,
+    { data: BodyType<TelegramAccountVerifyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof telegramAccountVerify>>,
+  TError,
+  { data: BodyType<TelegramAccountVerifyBody> },
+  TContext
+> => {
+  return useMutation(getTelegramAccountVerifyMutationOptions(options));
+};
+
+/**
+ * @summary Verify Telegram 2FA password
+ */
+export const getTelegramAccountVerify2faUrl = () => {
+  return `/api/telegram/account/verify-2fa`;
+};
+
+export const telegramAccountVerify2fa = async (
+  telegramAccountVerify2faBody: TelegramAccountVerify2faBody,
+  options?: RequestInit,
+): Promise<TelegramAuthResult> => {
+  return customFetch<TelegramAuthResult>(getTelegramAccountVerify2faUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(telegramAccountVerify2faBody),
+  });
+};
+
+export const getTelegramAccountVerify2faMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof telegramAccountVerify2fa>>,
+    TError,
+    { data: BodyType<TelegramAccountVerify2faBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof telegramAccountVerify2fa>>,
+  TError,
+  { data: BodyType<TelegramAccountVerify2faBody> },
+  TContext
+> => {
+  const mutationKey = ["telegramAccountVerify2fa"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof telegramAccountVerify2fa>>,
+    { data: BodyType<TelegramAccountVerify2faBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return telegramAccountVerify2fa(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TelegramAccountVerify2faMutationResult = NonNullable<
+  Awaited<ReturnType<typeof telegramAccountVerify2fa>>
+>;
+export type TelegramAccountVerify2faMutationBody =
+  BodyType<TelegramAccountVerify2faBody>;
+export type TelegramAccountVerify2faMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Verify Telegram 2FA password
+ */
+export const useTelegramAccountVerify2fa = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof telegramAccountVerify2fa>>,
+    TError,
+    { data: BodyType<TelegramAccountVerify2faBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof telegramAccountVerify2fa>>,
+  TError,
+  { data: BodyType<TelegramAccountVerify2faBody> },
+  TContext
+> => {
+  return useMutation(getTelegramAccountVerify2faMutationOptions(options));
+};
+
+/**
+ * @summary Disconnect Telegram account
+ */
+export const getTelegramAccountDisconnectUrl = () => {
+  return `/api/telegram/account`;
+};
+
+export const telegramAccountDisconnect = async (
+  options?: RequestInit,
+): Promise<TelegramAccountDisconnect200> => {
+  return customFetch<TelegramAccountDisconnect200>(
+    getTelegramAccountDisconnectUrl(),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getTelegramAccountDisconnectMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof telegramAccountDisconnect>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof telegramAccountDisconnect>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["telegramAccountDisconnect"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof telegramAccountDisconnect>>,
+    void
+  > = () => {
+    return telegramAccountDisconnect(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TelegramAccountDisconnectMutationResult = NonNullable<
+  Awaited<ReturnType<typeof telegramAccountDisconnect>>
+>;
+
+export type TelegramAccountDisconnectMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Disconnect Telegram account
+ */
+export const useTelegramAccountDisconnect = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof telegramAccountDisconnect>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof telegramAccountDisconnect>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getTelegramAccountDisconnectMutationOptions(options));
 };
 
 /**

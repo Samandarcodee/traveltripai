@@ -589,9 +589,10 @@ export const GetTimeSeriesResponse = zod.object({
  */
 export const GetSettingsResponse = zod.object({
   telegramBotToken: zod.string().nullish(),
-  telegramWebhookUrl: zod.string().nullish(),
   telegramBotUsername: zod.string().nullish(),
-  telegramConnected: zod.boolean(),
+  telegramBotConnected: zod.boolean(),
+  telegramAccountPhone: zod.string().nullish(),
+  telegramAccountConnected: zod.boolean(),
   operatorName: zod.string().nullish(),
   companyName: zod.string().nullish(),
 });
@@ -601,16 +602,16 @@ export const GetSettingsResponse = zod.object({
  */
 export const UpdateSettingsBody = zod.object({
   telegramBotToken: zod.string().nullish(),
-  telegramWebhookUrl: zod.string().nullish(),
   operatorName: zod.string().nullish(),
   companyName: zod.string().nullish(),
 });
 
 export const UpdateSettingsResponse = zod.object({
   telegramBotToken: zod.string().nullish(),
-  telegramWebhookUrl: zod.string().nullish(),
   telegramBotUsername: zod.string().nullish(),
-  telegramConnected: zod.boolean(),
+  telegramBotConnected: zod.boolean(),
+  telegramAccountPhone: zod.string().nullish(),
+  telegramAccountConnected: zod.boolean(),
   operatorName: zod.string().nullish(),
   companyName: zod.string().nullish(),
 });
@@ -623,6 +624,54 @@ export const TestTelegramBotResponse = zod.object({
   botUsername: zod.string().nullish(),
   botName: zod.string().nullish(),
   error: zod.string().nullish(),
+});
+
+/**
+ * @summary Start Telegram account auth (send code)
+ */
+export const TelegramAccountConnectBody = zod.object({
+  phone: zod.string(),
+  apiId: zod.number(),
+  apiHash: zod.string(),
+});
+
+export const TelegramAccountConnectResponse = zod.object({
+  status: zod.enum(["code_sent", "connected", "need_password", "error"]),
+  phone: zod.string().nullish(),
+  error: zod.string().nullish(),
+});
+
+/**
+ * @summary Verify Telegram OTP code
+ */
+export const TelegramAccountVerifyBody = zod.object({
+  code: zod.string(),
+});
+
+export const TelegramAccountVerifyResponse = zod.object({
+  status: zod.enum(["code_sent", "connected", "need_password", "error"]),
+  phone: zod.string().nullish(),
+  error: zod.string().nullish(),
+});
+
+/**
+ * @summary Verify Telegram 2FA password
+ */
+export const TelegramAccountVerify2faBody = zod.object({
+  password: zod.string(),
+});
+
+export const TelegramAccountVerify2faResponse = zod.object({
+  status: zod.enum(["code_sent", "connected", "need_password", "error"]),
+  phone: zod.string().nullish(),
+  error: zod.string().nullish(),
+});
+
+/**
+ * @summary Disconnect Telegram account
+ */
+export const TelegramAccountDisconnectResponse = zod.object({
+  ok: zod.boolean(),
 });
 
 /**
