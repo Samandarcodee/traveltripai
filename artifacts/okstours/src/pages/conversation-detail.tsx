@@ -9,7 +9,7 @@ import {
   useListTemplates,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { ArrowLeft, User, Bot, CheckCircle, Headset, Send, Zap, Shield, ChevronDown, FileText } from "lucide-react";
+import { ArrowLeft, User, Bot, CheckCircle, Headset, Send, Zap, Shield, ChevronDown, FileText, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -136,8 +136,20 @@ export default function ConversationDetail() {
     setOperatorInput(content);
   };
 
-  if (convLoading || msgsLoading) return <div className="p-8 text-center animate-pulse">Загрузка...</div>;
-  if (!conversation) return <div className="p-8 text-center">Диалог не найден</div>;
+  if (convLoading) return <div className="p-8 text-center animate-pulse text-muted-foreground">Загрузка...</div>;
+  if (!conversation) return (
+    <div className="p-12 flex flex-col items-center justify-center text-center h-full">
+      <MessageSquare className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
+      <h3 className="text-lg font-semibold">Диалог не найден</h3>
+      <p className="text-sm text-muted-foreground mt-1 mb-4">Возможно, диалог был удалён или ссылка устарела.</p>
+      <Link href="/conversations">
+        <Button variant="outline" size="sm" className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Назад к диалогам
+        </Button>
+      </Link>
+    </div>
+  );
 
   const isOperatorMode = conversation.operatorMode;
 

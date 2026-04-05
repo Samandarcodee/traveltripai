@@ -137,7 +137,7 @@ router.post("/leads/:id/book", async (req, res): Promise<void> => {
 
   await db.insert(activityTable).values({
     type: "booking",
-    description: `Bron tasdiqlandi: ${lead.name ?? "Noma'lum"} ${lead.destination ? `→ ${lead.destination}` : ""}`,
+    description: `Бронь подтверждена: ${lead.name ?? "Неизвестный"} ${lead.destination ? `→ ${lead.destination}` : ""}`,
     conversationId: lead.conversationId ?? undefined,
     leadId: lead.id,
   });

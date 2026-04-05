@@ -173,7 +173,7 @@ Faqat JSON qaytaring, boshqa hech narsa yozmang:
 
       await db.insert(activityTable).values({
         type: "follow_up",
-        description: `AI operator yordami kerak deb belgiladi`,
+        description: `AI агент запросил помощь оператора`,
         conversationId,
         leadId: conv.leadId ?? undefined,
       });
@@ -224,7 +224,7 @@ router.post("/chat", async (req, res): Promise<void> => {
 
     await db.insert(activityTable).values({
       type: "new_lead",
-      description: `Yangi mijoz: ${customerName ?? "Noma'lum"} (${channel})`,
+      description: `Новый клиент: ${customerName ?? "Неизвестный"} (${channel})`,
       conversationId,
       leadId: newLead.id,
     });
@@ -300,7 +300,7 @@ router.post("/chat", async (req, res): Promise<void> => {
 
   await db.insert(activityTable).values({
     type: "new_message",
-    description: `Yangi xabar (${channel}): "${message.substring(0, 60)}${message.length > 60 ? "..." : ""}"`,
+    description: `Новое сообщение (${channel}): "${message.substring(0, 60)}${message.length > 60 ? "..." : ""}"`,
     conversationId,
     leadId: leadId ?? undefined,
   });
@@ -314,7 +314,7 @@ router.post("/chat", async (req, res): Promise<void> => {
     if (leadId) {
       await db.insert(activityTable).values({
         type: "follow_up",
-        description: `AI operator yordami kerak deb belgiladi`,
+        description: `AI агент запросил помощь оператора`,
         conversationId,
         leadId,
       });

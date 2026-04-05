@@ -280,7 +280,7 @@ FAQAT XABAR MATNINI YOZING, boshqa narsa yozmang.`,
 
   await db.insert(activityTable).values({
     type: "follow_up",
-    description: `Follow-up yuborildi: ${conversation.customerName ?? "Noma'lum mijoz"}`,
+    description: `Follow-up отправлен: ${conversation.customerName ?? 'Неизвестный клиент'}`,
     conversationId: params.data.id,
     leadId: conversation.leadId ?? undefined,
   });

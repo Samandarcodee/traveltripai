@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useParams, Link } from "wouter";
 import { useGetLead, useUpdateLead, useBookLead, useListLeadTasks, useCreateLeadTask, useUpdateTask, useDeleteTask } from "@workspace/api-client-react";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import {
   ArrowLeft, Save, MapPin, DollarSign, MessageSquare, User, Phone,
   Mail, CheckCircle2, Plane, Calendar, Luggage, Users, CreditCard,
@@ -302,7 +303,7 @@ export default function LeadDetail() {
             </Badge>
           )}
           <span className="text-xs text-muted-foreground">
-            Добавлен {format(new Date(lead.createdAt), "d MMM yyyy")}
+            Добавлен {format(new Date(lead.createdAt), "d MMM yyyy", { locale: ru })}
           </span>
         </div>
       </div>
@@ -659,7 +660,7 @@ export default function LeadDetail() {
                         {task.dueDate && (
                           <span className={`flex items-center gap-0.5 text-[10px] ${isOverdue ? "text-red-500" : "text-muted-foreground"}`}>
                             {isOverdue ? <AlertCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                            {format(new Date(task.dueDate), "d MMM yyyy")}
+                            {format(new Date(task.dueDate), "d MMM yyyy", { locale: ru })}
                           </span>
                         )}
                       </div>

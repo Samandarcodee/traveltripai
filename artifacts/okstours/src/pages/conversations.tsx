@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "wouter";
 import { useListConversations } from "@workspace/api-client-react";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { MessageSquare, Filter, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -114,7 +115,7 @@ export default function Conversations() {
                       )}
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap ml-2 shrink-0">
-                      {conv.lastMessageAt ? format(new Date(conv.lastMessageAt), "d MMM, HH:mm") : ""}
+                      {conv.lastMessageAt ? format(new Date(conv.lastMessageAt), "d MMM, HH:mm", { locale: ru }) : ""}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground truncate">

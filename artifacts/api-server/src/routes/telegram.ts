@@ -76,7 +76,7 @@ router.post("/telegram/webhook", async (req, res): Promise<void> => {
 
       await _db.insert(activityTable).values({
         type: "new_lead",
-        description: `Telegram bot yangi mijoz: ${customerName}`,
+        description: `Telegram: новый клиент ${customerName}`,
         conversationId: newConv.id,
         leadId: lead.id,
       });
@@ -115,7 +115,7 @@ router.post("/telegram/webhook", async (req, res): Promise<void> => {
 
     await _db.insert(activityTable).values({
       type: "new_message",
-      description: `Telegram bot xabar: ${customerName} — "${text.slice(0, 60)}"`,
+      description: `Telegram: ${customerName} — "${text.slice(0, 60)}"`,
       conversationId: conversation.id,
       leadId: conversation.leadId ?? undefined,
     });
