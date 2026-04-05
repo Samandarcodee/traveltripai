@@ -290,13 +290,21 @@ export default function ConversationDetail() {
         </div>
       </div>
 
-      {conversation.status !== "closed" && isOperatorMode && (
-        <div className="px-6 py-3 bg-amber-50 border-t border-amber-200">
+      {conversation.status !== "closed" && (
+        <div className={`px-6 py-3 border-t ${isOperatorMode ? "bg-amber-50 border-amber-200" : "bg-muted/30 border-border"}`}>
+          {!isOperatorMode && (
+            <div className="max-w-3xl mx-auto mb-2">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Shield className="h-3 w-3 text-blue-500" />
+                AI agent avtomatik javob bermoqda. Yuborsangiz, operator rejimi yonadi.
+              </p>
+            </div>
+          )}
           <div className="max-w-3xl mx-auto space-y-2">
             {/* Template picker row */}
             <div className="flex items-center gap-2">
-              <FileText className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-              <span className="text-xs font-medium text-amber-700 mr-1">Shablonlar:</span>
+              <FileText className={`h-3.5 w-3.5 shrink-0 ${isOperatorMode ? "text-amber-600" : "text-muted-foreground"}`} />
+              <span className={`text-xs font-medium mr-1 ${isOperatorMode ? "text-amber-700" : "text-muted-foreground"}`}>Shablonlar:</span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-amber-300 bg-white hover:bg-amber-50">
@@ -350,7 +358,7 @@ export default function ConversationDetail() {
                   }
                 }}
                 placeholder="Mijozga xabar yozing... (Shift+Enter - yangi qator)"
-                className="flex-1 bg-white border-amber-200 focus-visible:ring-amber-400 min-h-[70px] max-h-[140px] text-sm resize-none"
+                className={`flex-1 bg-white min-h-[70px] max-h-[140px] text-sm resize-none ${isOperatorMode ? "border-amber-200 focus-visible:ring-amber-400" : ""}`}
                 disabled={operatorReplyMutation.isPending}
                 rows={2}
               />
@@ -358,9 +366,13 @@ export default function ConversationDetail() {
                 type="submit"
                 size="sm"
                 disabled={!operatorInput.trim() || operatorReplyMutation.isPending}
-                className="bg-amber-500 hover:bg-amber-600 text-white border-0 self-end"
+                className={`self-end ${isOperatorMode ? "bg-amber-500 hover:bg-amber-600 text-white border-0" : "bg-primary hover:bg-primary/90 text-white border-0"}`}
               >
-                <Send className="h-4 w-4" />
+                {operatorReplyMutation.isPending ? (
+                  <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </form>
           </div>

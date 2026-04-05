@@ -156,12 +156,19 @@ async function handleIncomingMessage(event: NewMessageEvent): Promise<void> {
 export async function sendMessageToUser(externalId: string, text: string): Promise<boolean> {
   if (!activeClient) return false;
   try {
-    const entity = await activeClient.getEntity(BigInt(externalId));
-    await activeClient.sendMessage(entity, { message: text });
+    await activeClient.sendMessage(Number(externalId), { message: text });
     return true;
-  } catch (err) {
-    logger.error({ err }, "Failed to send Telegram message to user");
-    return false;
+  } catch (err: any) {
+    logger.error({ err, externalId }, "Failed to send Telegram message to user");
+    // Try alternative approach
+    try {
+      const entity = await activeClient.getEntity(externalId);
+      await activeClient.sendMessage(entity, { message: text });
+      return true;
+    } catch (err2) {
+      logger.error({ err: err2 }, "sendMessageToUser fallback also failed");
+      return false;
+    }
   }
 }
 

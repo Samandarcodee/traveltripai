@@ -13,18 +13,23 @@ import {
   SendFollowUpParams,
 } from "@workspace/api-zod";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import * as telegramAccount from "../services/telegram-account.js";
 
-async function getTelegramToken(): Promise<string | null> {
+async function sendToTelegram(externalId: string, text: string): Promise<void> {
+  // Try GramJS account first
+  if (telegramAccount.isConnected()) {
+    const sent = await telegramAccount.sendMessageToUser(externalId, text);
+    if (sent) return;
+  }
+  // Fall back to bot token
   const [row] = await db.select().from(settingsTable).where(eq(settingsTable.key, "telegram_bot_token"));
-  return row?.value ?? null;
-}
-
-async function sendTelegramMsg(token: string, chatId: string, text: string): Promise<void> {
+  const token = row?.value;
+  if (!token) return;
   try {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text }),
+      body: JSON.stringify({ chat_id: externalId, text }),
     });
   } catch {}
 }
@@ -177,10 +182,7 @@ router.post("/conversations/:id/operator-reply", async (req, res): Promise<void>
   });
 
   if (conversation.channel === "telegram" && conversation.externalId) {
-    const token = await getTelegramToken();
-    if (token) {
-      await sendTelegramMsg(token, conversation.externalId, body.data.content);
-    }
+    await sendToTelegram(conversation.externalId, body.data.content);
   }
 
   res.json(formatMsg(message));
