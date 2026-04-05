@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useListLeads, useUpdateLead } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,13 +106,19 @@ function LeadCard({
 }) {
   const seg = SEGMENT_CONFIG[lead.segment];
   const SegIcon = seg.icon;
+  const [, navigate] = useLocation();
+
+  const handleCardClick = () => {
+    navigate(`/leads/${lead.id}`);
+  };
 
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, lead.id)}
-      className={`group bg-card border border-border rounded-xl p-4 shadow-sm cursor-grab active:cursor-grabbing transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 ${
-        isDragging ? "opacity-40 scale-95 rotate-1" : ""
+      onClick={handleCardClick}
+      className={`group bg-card border border-border rounded-xl p-4 shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 ${
+        isDragging ? "opacity-40 scale-95 rotate-1 cursor-grabbing" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -158,20 +164,21 @@ function LeadCard({
           {lead.conversationId && (
             <Link href={`/conversations/${lead.conversationId}`}>
               <button
-                className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                title="Suhbatni ko'rish"
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors text-[10px] font-medium"
+                title="Suhbatni ochish"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MessageSquare className="h-3 w-3" />
+                Chat
               </button>
             </Link>
           )}
           <Link href={`/leads/${lead.id}`}>
             <button
-              className="flex items-center gap-0.5 text-[10px] font-medium text-primary hover:text-primary/80 transition-colors opacity-0 group-hover:opacity-100"
+              className="flex items-center gap-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
-              Ochish <ChevronRight className="h-3 w-3" />
+              <ChevronRight className="h-3 w-3" />
             </button>
           </Link>
         </div>

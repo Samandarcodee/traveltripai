@@ -84,6 +84,10 @@ async function handleIncomingMessage(event: NewMessageEvent): Promise<void> {
       }).returning();
       conversation = newConv;
 
+      await db.update(leadsTable)
+        .set({ conversationId: newConv.id })
+        .where(eq(leadsTable.id, lead.id));
+
       await db.insert(activityTable).values({
         type: "new_lead",
         description: `Telegram yangi mijoz: ${customerName}`,

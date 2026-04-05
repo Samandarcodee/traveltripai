@@ -81,6 +81,10 @@ router.post("/telegram/webhook", async (req, res): Promise<void> => {
       }).returning();
       conversation = newConv;
 
+      await _db.update(leadsTable)
+        .set({ conversationId: newConv.id })
+        .where(eq(leadsTable.id, lead.id));
+
       await _db.insert(activityTable).values({
         type: "new_lead",
         description: `Telegram bot yangi mijoz: ${customerName}`,
