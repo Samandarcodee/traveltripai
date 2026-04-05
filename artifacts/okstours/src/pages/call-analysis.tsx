@@ -77,7 +77,7 @@ export default function CallAnalysis() {
   const SentimentIcon = sentimentInfo?.icon ?? CheckCircle;
 
   return (
-    <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full">
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
           <PhoneCall className="h-7 w-7 text-primary" />

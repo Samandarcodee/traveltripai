@@ -43,7 +43,7 @@ export default function Conversations() {
   });
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto flex flex-col h-full space-y-6">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto flex flex-col h-full space-y-6 overflow-y-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Диалоги</h1>

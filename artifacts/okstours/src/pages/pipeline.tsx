@@ -296,7 +296,7 @@ export default function Pipeline() {
   const rottingCount = (leads ?? []).filter(isRotting).length;
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background overflow-hidden">
       <div className="shrink-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div>

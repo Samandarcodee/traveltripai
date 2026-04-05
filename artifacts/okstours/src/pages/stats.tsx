@@ -41,7 +41,7 @@ export default function Stats() {
   }));
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full">
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Статистика</h1>
         <p className="text-muted-foreground">Ежедневные, еженедельные и ежемесячные показатели работы.</p>

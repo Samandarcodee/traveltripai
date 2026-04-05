@@ -173,7 +173,7 @@ export default function Settings() {
   const isConnected = settings?.telegramAccountConnected || authStep === "connected";
 
   return (
-    <div className="p-6 md:p-8 max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="p-6 md:p-8 max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
           <Settings2 className="h-7 w-7 text-primary" />

@@ -106,13 +106,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-[100dvh] flex w-full bg-background">
+    <div className="h-[100dvh] flex w-full bg-background overflow-hidden">
       <aside className="hidden md:flex flex-col w-56 bg-sidebar border-r border-sidebar-border shrink-0">
         <NavLinks />
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card shrink-0">
           <h1 className="text-lg font-bold text-primary">OKSTours</h1>
           <Sheet>
             <SheetTrigger asChild>
@@ -127,7 +127,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Sheet>
         </header>
 
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 min-h-0 overflow-hidden">
           {children}
         </main>
       </div>

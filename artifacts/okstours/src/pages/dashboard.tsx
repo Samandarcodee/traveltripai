@@ -29,7 +29,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Общий обзор</h1>
         <p className="text-muted-foreground">Операции за сегодня с первого взгляда.</p>

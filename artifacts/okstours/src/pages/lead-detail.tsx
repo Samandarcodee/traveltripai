@@ -191,7 +191,7 @@ export default function LeadDetail() {
   const f = formData;
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-5">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-5 overflow-y-auto h-full">
       <div className="flex items-center justify-between">
         <Link href="/leads">
           <Button variant="ghost" size="sm" className="-ml-3 text-muted-foreground">
