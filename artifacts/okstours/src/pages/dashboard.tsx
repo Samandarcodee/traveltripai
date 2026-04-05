@@ -5,6 +5,7 @@ import { MessageSquare, Users, Activity, Flame, CheckSquare, TrendingUp } from "
 import { ChannelIcon } from "@/components/channel-icon";
 import { Link } from "wouter";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 
 const activityIcons: Record<string, React.ReactNode> = {
   new_lead: <Users className="h-3.5 w-3.5 text-blue-500" />,
@@ -103,7 +104,7 @@ export default function Dashboard() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium leading-tight">{item.description}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {format(new Date(item.createdAt), "d MMM, HH:mm")}
+                      {format(new Date(item.createdAt), "d MMM, HH:mm", { locale: ru })}
                     </p>
                   </div>
                   {item.conversationId && (

@@ -27,6 +27,23 @@ function isRotting(lead: { updatedAt: string; status: string }): boolean {
   return days > 3 && lead.status !== "booked" && lead.status !== "lost";
 }
 
+const AVATAR_COLORS = [
+  "bg-blue-500", "bg-purple-500", "bg-emerald-500",
+  "bg-amber-500", "bg-rose-500", "bg-indigo-500", "bg-teal-500",
+];
+
+function getInitials(name: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function getAvatarColor(name: string | null): string {
+  if (!name) return AVATAR_COLORS[0];
+  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+}
+
 type Lead = {
   id: number;
   name: string | null;
@@ -129,24 +146,25 @@ function LeadCard({
           : "border-border hover:border-primary/30"
       } ${isDragging ? "opacity-40 scale-95 rotate-1 cursor-grabbing" : ""}`}
     >
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            {isRotting(lead) && (
-              <AlertTriangle className="h-3.5 w-3.5 text-orange-500 shrink-0" title="Нет активности 3+ дней" />
-            )}
-            <p className="font-semibold text-sm text-foreground truncate">
-              {lead.name || "Неизвестный"}
-            </p>
-          </div>
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className={`w-8 h-8 rounded-full ${getAvatarColor(lead.name)} flex items-center justify-center text-white font-bold text-xs shrink-0 relative`}>
+          {getInitials(lead.name)}
+          {isRotting(lead) && (
+            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-orange-500 rounded-full border-2 border-background" title="Нет активности 3+ дней" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm text-foreground truncate">
+            {lead.name || "Неизвестный"}
+          </p>
           {lead.phone && (
-            <div className="flex items-center gap-1 mt-0.5">
-              <Phone className="h-3 w-3 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">{lead.phone}</p>
+            <div className="flex items-center gap-1">
+              <Phone className="h-2.5 w-2.5 text-muted-foreground" />
+              <p className="text-[11px] text-muted-foreground">{lead.phone}</p>
             </div>
           )}
         </div>
-        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium shrink-0 ${seg.badgeClass}`}>
+        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium shrink-0 ${seg.badgeClass}`}>
           <SegIcon className={`h-2.5 w-2.5 ${seg.class}`} />
           {seg.label}
         </div>

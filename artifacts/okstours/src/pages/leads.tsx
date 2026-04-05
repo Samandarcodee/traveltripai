@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Link } from "wouter";
 import { useListLeads, useCreateLead } from "@workspace/api-client-react";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import {
   Users, Filter, Plus, Search, Phone, MapPin, X, Save,
   DollarSign, User, AlertTriangle, Send, CheckSquare, Square,
@@ -32,6 +33,23 @@ const statusColors: Record<string, string> = {
   booked: "bg-green-100 text-green-700",
   lost: "bg-red-100 text-red-700",
 };
+
+const AVATAR_COLORS = [
+  "bg-blue-500", "bg-purple-500", "bg-emerald-500",
+  "bg-amber-500", "bg-rose-500", "bg-indigo-500", "bg-teal-500",
+];
+
+function getInitials(name: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function getAvatarColor(name: string | null): string {
+  if (!name) return AVATAR_COLORS[0];
+  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+}
 
 function daysSince(dateStr: string): number {
   return (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24);
@@ -229,45 +247,50 @@ export default function Leads() {
               const daysAgo = Math.floor(daysSince(lead.updatedAt));
               return (
                 <Link key={lead.id} href={`/leads/${lead.id}`} className="block group">
-                  <div className={`bg-card border hover:shadow-md transition-all p-5 rounded-xl h-full flex flex-col gap-3 ${
+                  <div className={`bg-card border hover:shadow-md transition-all p-4 rounded-xl h-full flex flex-col gap-3 ${
                     rotting ? "border-orange-300 hover:border-orange-400" : "hover:border-primary/50"
                   }`}>
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {rotting && (
-                          <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0" title="Нет активности 3+ дней" />
-                        )}
-                        <h3 className="font-bold text-base group-hover:text-primary transition-colors line-clamp-1">
-                          {lead.name || "Неизвестный лид"}
-                        </h3>
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-full ${getAvatarColor(lead.name)} flex items-center justify-center text-white font-bold text-sm shrink-0`}>
+                        {getInitials(lead.name)}
                       </div>
-                      <Badge variant="outline" className={`ml-2 shrink-0 text-xs ${segmentColors[lead.segment] ?? ""}`}>
-                        {segmentLabels[lead.segment] ?? lead.segment}
-                      </Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 justify-between">
+                          <div className="flex items-center gap-1 min-w-0">
+                            {rotting && <AlertTriangle className="w-3.5 h-3.5 text-orange-500 shrink-0" />}
+                            <h3 className="font-semibold text-sm group-hover:text-primary transition-colors truncate">
+                              {lead.name || "Неизвестный"}
+                            </h3>
+                          </div>
+                          <Badge variant="outline" className={`shrink-0 text-[10px] px-1.5 py-0 ${segmentColors[lead.segment] ?? ""}`}>
+                            {segmentLabels[lead.segment] ?? lead.segment}
+                          </Badge>
+                        </div>
+                        {lead.destination && (
+                          <div className="flex items-center text-xs text-muted-foreground gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{lead.destination}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="space-y-1.5 flex-1">
-                      {lead.destination && (
-                        <div className="flex items-center text-sm text-muted-foreground gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">{lead.destination}</span>
-                        </div>
-                      )}
+                    <div className="space-y-1 pl-[52px]">
                       {lead.phone && (
-                        <div className="flex items-center text-sm text-muted-foreground gap-1.5">
-                          <Phone className="w-3.5 h-3.5 shrink-0" />
+                        <div className="flex items-center text-xs text-muted-foreground gap-1.5">
+                          <Phone className="w-3 h-3 shrink-0" />
                           <span className="truncate">{lead.phone}</span>
                         </div>
                       )}
                       {lead.budget && (
-                        <div className="flex items-center text-sm text-muted-foreground gap-1.5">
-                          <DollarSign className="w-3.5 h-3.5 shrink-0" />
+                        <div className="flex items-center text-xs text-muted-foreground gap-1.5">
+                          <DollarSign className="w-3 h-3 shrink-0" />
                           <span>{lead.budget}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t">
+                    <div className="flex items-center justify-between pt-2.5 border-t mt-auto">
                       <Badge className={`text-[10px] font-medium ${statusColors[lead.status] ?? ""}`} variant="secondary">
                         {statusLabels[lead.status] ?? lead.status}
                       </Badge>
@@ -275,7 +298,7 @@ export default function Leads() {
                         <Clock className="w-3 h-3" />
                         {rotting
                           ? <span className="text-orange-600 font-medium">{daysAgo} дн. назад</span>
-                          : format(new Date(lead.updatedAt), "d MMM yyyy")
+                          : format(new Date(lead.updatedAt), "d MMM yyyy", { locale: ru })
                         }
                       </div>
                     </div>
