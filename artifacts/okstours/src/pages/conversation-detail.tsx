@@ -10,7 +10,7 @@ import {
   useGetLead,
   useUpdateLead,
 } from "@workspace/api-client-react";
-import { format } from "date-fns";
+import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import { ru } from "date-fns/locale";
 import {
   ArrowLeft, User, Bot, CheckCircle, Headset, Send, Zap, Shield,
@@ -351,8 +351,9 @@ export default function ConversationDetail() {
 
         {/* LEFT: MESSAGES */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 overflow-y-auto p-4 bg-muted/20 space-y-3">
-            <div className="text-center py-2">
+          <div className="flex-1 overflow-y-auto px-4 py-4 bg-muted/20">
+            {/* Start label */}
+            <div className="text-center mb-4">
               <span className="text-[11px] text-muted-foreground bg-background border px-3 py-1 rounded-full">
                 Диалог начат {format(new Date(conversation.createdAt), "d MMMM yyyy", { locale: ru })}
               </span>
@@ -362,70 +363,119 @@ export default function ConversationDetail() {
               <div className="flex justify-center py-8">
                 <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
               </div>
-            ) : (messages ?? []).map((msg) => {
-              const isUser = msg.role === "user";
-              const isOperatorMsg = msg.role === "operator";
-              return (
-                <div key={msg.id} className={`flex items-end gap-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mb-0.5 ${
-                    isUser ? "bg-muted text-muted-foreground" :
-                    isOperatorMsg ? "bg-amber-500 text-white" :
-                    "bg-primary text-primary-foreground"
-                  }`}>
-                    {isUser ? <User size={11} /> : isOperatorMsg ? <Headset size={11} /> : <Bot size={11} />}
-                  </div>
-                  <div className={`max-w-[75%] ${isUser ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
-                    {isOperatorMsg ? (
-                      <p className="text-[10px] text-amber-600 font-semibold ml-1 flex items-center gap-1">
-                        <Headset className="w-2.5 h-2.5" /> Оператор
-                      </p>
-                    ) : !isUser ? (
-                      <p className="text-[10px] text-primary font-semibold ml-1 flex items-center gap-1">
-                        <Bot className="w-2.5 h-2.5" /> Aziz AI
-                      </p>
-                    ) : null}
-                    <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                      isUser
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : isOperatorMsg
-                        ? "bg-amber-50 border border-amber-200 text-foreground rounded-bl-sm"
-                        : "bg-blue-50 border border-blue-100 text-foreground rounded-bl-sm"
-                    }`}>
-                      {msg.content}
+            ) : (() => {
+              const msgs = messages ?? [];
+              const elements: React.ReactNode[] = [];
+              let lastDate: Date | null = null;
+
+              msgs.forEach((msg, idx) => {
+                const msgDate = new Date(msg.createdAt);
+                const isUser = msg.role === "user";
+                const isOperatorMsg = msg.role === "operator";
+
+                // Date separator
+                if (!lastDate || !isSameDay(lastDate, msgDate)) {
+                  lastDate = msgDate;
+                  let dateLabel = "";
+                  if (isToday(msgDate)) dateLabel = "Сегодня";
+                  else if (isYesterday(msgDate)) dateLabel = "Вчера";
+                  else dateLabel = format(msgDate, "d MMMM", { locale: ru });
+
+                  elements.push(
+                    <div key={`sep-${idx}`} className="flex items-center gap-3 my-4">
+                      <div className="flex-1 h-px bg-border/60" />
+                      <span className="text-[10px] text-muted-foreground font-medium px-2 py-0.5 bg-background border rounded-full">
+                        {dateLabel}
+                      </span>
+                      <div className="flex-1 h-px bg-border/60" />
                     </div>
-                    <p className={`text-[10px] text-muted-foreground px-1 ${isUser ? "text-right" : "text-left"}`}>
-                      {format(new Date(msg.createdAt), "HH:mm")}
-                    </p>
+                  );
+                }
+
+                elements.push(
+                  <div key={msg.id} className={`flex items-end gap-2 mb-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+                    {/* Avatar */}
+                    {isUser ? (
+                      <div className={`w-7 h-7 rounded-full ${getAvatarColor(customerName)} flex items-center justify-center text-white font-bold text-[10px] shrink-0 mb-0.5`}>
+                        {getInitials(customerName)}
+                      </div>
+                    ) : isOperatorMsg ? (
+                      <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-white shrink-0 mb-0.5 text-[9px] font-bold">
+                        ОП
+                      </div>
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white shrink-0 mb-0.5 text-[9px] font-bold">
+                        AI
+                      </div>
+                    )}
+
+                    {/* Bubble */}
+                    <div className={`max-w-[72%] flex flex-col gap-0.5 ${isUser ? "items-end" : "items-start"}`}>
+                      {!isUser && (
+                        <p className={`text-[10px] font-semibold ml-1 flex items-center gap-0.5 ${
+                          isOperatorMsg ? "text-amber-600" : "text-primary"
+                        }`}>
+                          {isOperatorMsg
+                            ? <><Headset className="w-2.5 h-2.5" /> Оператор</>
+                            : <><Bot className="w-2.5 h-2.5" /> Aziz AI</>
+                          }
+                        </p>
+                      )}
+                      <div className={`px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm ${
+                        isUser
+                          ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm"
+                          : isOperatorMsg
+                          ? "bg-amber-50 border border-amber-200/80 text-foreground rounded-2xl rounded-bl-sm"
+                          : "bg-white border border-slate-200 text-foreground rounded-2xl rounded-bl-sm"
+                      }`}>
+                        {msg.content}
+                      </div>
+                      <p className={`text-[10px] text-muted-foreground px-1 ${isUser ? "text-right" : "text-left"}`}>
+                        {format(msgDate, "HH:mm")}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              });
+
+              return elements;
+            })()}
             <div ref={messagesEndRef} />
           </div>
 
           {/* ── INPUT AREA ── */}
           {conversation.status === "closed" ? (
-            <div className="px-4 py-3 bg-muted/30 border-t text-center text-sm text-muted-foreground">
+            <div className="px-5 py-4 bg-muted/20 border-t flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle className="w-4 h-4 text-green-500" />
               Этот диалог закрыт
             </div>
           ) : (
-            <div className={`border-t px-4 py-3 ${isOperatorMode ? "bg-amber-50/60 border-amber-200" : "bg-background"}`}>
-              {!isOperatorMode && (
-                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mb-2">
-                  <Shield className="h-3 w-3 text-blue-400" />
-                  AI агент отвечает автоматически — нажмите «Взять чат» для ручного режима
-                </p>
-              )}
-              <div className="flex items-end gap-2">
+            <div className={`border-t shrink-0 ${isOperatorMode ? "bg-amber-50/50 border-amber-200" : "bg-background"}`}>
+              {/* Mode indicator */}
+              <div className={`px-4 py-1.5 flex items-center gap-1.5 border-b text-[11px] ${
+                isOperatorMode
+                  ? "bg-amber-100/60 border-amber-200 text-amber-700"
+                  : "bg-blue-50/60 border-blue-100 text-blue-600"
+              }`}>
+                {isOperatorMode
+                  ? <><Headset className="w-3 h-3" /> <span>Ручной режим — вы пишете клиенту напрямую</span></>
+                  : <><Shield className="w-3 h-3" /> <span>AI режим — Aziz отвечает автоматически</span></>
+                }
+              </div>
+
+              <div className="flex items-end gap-2.5 px-4 py-3">
                 {/* Template picker */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 self-end">
-                      <FileText className="h-3.5 w-3.5" />
+                    <Button
+                      variant="ghost" size="icon"
+                      className="h-9 w-9 shrink-0 self-end text-muted-foreground hover:text-foreground rounded-xl"
+                    >
+                      <FileText className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-72 max-h-80 overflow-y-auto" side="top" align="start">
-                    <DropdownMenuLabel className="text-xs text-muted-foreground">Выберите шаблон</DropdownMenuLabel>
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">Шаблоны ответов</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {Object.keys(templatesByCategory).length === 0 ? (
                       <div className="p-3 text-xs text-muted-foreground text-center">Шаблонов нет. Добавьте в настройках.</div>
@@ -455,28 +505,38 @@ export default function ConversationDetail() {
                 </DropdownMenu>
 
                 <form onSubmit={handleOperatorSend} className="flex-1 flex items-end gap-2">
-                  <Textarea
-                    value={operatorInput}
-                    onChange={(e) => setOperatorInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleOperatorSend(e);
-                      }
-                    }}
-                    placeholder={isOperatorMode ? "Напишите клиенту... (Enter — отправить)" : "Напишите сообщение..."}
-                    className={`flex-1 min-h-[44px] max-h-[120px] text-sm resize-none ${isOperatorMode ? "border-amber-300 focus-visible:ring-amber-400" : ""}`}
-                    rows={1}
-                    disabled={operatorReplyMutation.isPending}
-                  />
+                  <div className={`flex-1 flex items-end rounded-2xl border transition-colors ${
+                    isOperatorMode
+                      ? "border-amber-300 bg-white focus-within:border-amber-400"
+                      : "border-input bg-background focus-within:border-primary/50"
+                  }`}>
+                    <Textarea
+                      value={operatorInput}
+                      onChange={(e) => setOperatorInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleOperatorSend(e);
+                        }
+                      }}
+                      placeholder={isOperatorMode ? "Напишите клиенту... (Enter — отправить)" : "Напишите сообщение..."}
+                      className="flex-1 min-h-[40px] max-h-[120px] text-sm resize-none border-0 shadow-none focus-visible:ring-0 bg-transparent px-3.5 py-2.5"
+                      rows={1}
+                      disabled={operatorReplyMutation.isPending}
+                    />
+                  </div>
                   <Button
                     type="submit" size="icon"
                     disabled={!operatorInput.trim() || operatorReplyMutation.isPending}
-                    className={`h-9 w-9 shrink-0 ${isOperatorMode ? "bg-amber-500 hover:bg-amber-600 text-white border-0" : ""}`}
+                    className={`h-9 w-9 shrink-0 rounded-xl ${
+                      isOperatorMode
+                        ? "bg-amber-500 hover:bg-amber-600 text-white border-0"
+                        : "bg-primary hover:bg-primary/90"
+                    }`}
                   >
                     {operatorReplyMutation.isPending
                       ? <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      : <Send className="h-3.5 w-3.5" />
+                      : <Send className="h-4 w-4" />
                     }
                   </Button>
                 </form>

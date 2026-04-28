@@ -1,36 +1,68 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
 import { useListConversations } from "@workspace/api-client-react";
-import { format } from "date-fns";
+import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
 import { ru } from "date-fns/locale";
-import { MessageSquare, Filter, Search } from "lucide-react";
+import {
+  MessageSquare, Search, Bot, Headset, CheckCircle,
+  Clock, Flame, Thermometer, Snowflake, Globe,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ChannelIcon } from "@/components/channel-icon";
 
-const statusLabels: Record<string, string> = {
-  active: "Активный",
-  pending: "Ожидание",
-  closed: "Закрыт",
+const AVATAR_COLORS = [
+  "bg-blue-500", "bg-purple-500", "bg-emerald-500",
+  "bg-amber-500", "bg-rose-500", "bg-indigo-500", "bg-teal-500",
+];
+function getInitials(name: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0]! + parts[1][0]!).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+function getAvatarColor(name: string | null): string {
+  if (!name) return AVATAR_COLORS[0]!;
+  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]!;
+}
+
+function formatTime(date: string | null): string {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isToday(d)) return format(d, "HH:mm");
+  if (isYesterday(d)) return "Вчера";
+  return format(d, "d MMM", { locale: ru });
+}
+
+const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
+  active:  { label: "Активный",  dot: "bg-green-500",  badge: "bg-green-100 text-green-700 border-green-200" },
+  pending: { label: "Ожидание",  dot: "bg-amber-500",  badge: "bg-amber-100 text-amber-700 border-amber-200" },
+  closed:  { label: "Закрыт",    dot: "bg-slate-400",  badge: "bg-slate-100 text-slate-600 border-slate-200" },
 };
 
-const channelLabels: Record<string, string> = {
-  telegram: "Telegram",
-  whatsapp: "WhatsApp",
-  instagram: "Instagram",
-  web: "Web",
-  sms: "SMS",
-  email: "Email",
+const SEGMENT_CONFIG: Record<string, { icon: React.ElementType; color: string; label: string }> = {
+  hot:  { icon: Flame,       color: "text-red-500",    label: "Горячий"  },
+  warm: { icon: Thermometer, color: "text-amber-500",  label: "Тёплый"   },
+  cold: { icon: Snowflake,   color: "text-blue-400",   label: "Холодный" },
 };
+
+type TabValue = "all" | "active" | "pending" | "closed";
+
+const TABS: { value: TabValue; label: string }[] = [
+  { value: "all",     label: "Все"      },
+  { value: "active",  label: "Активные" },
+  { value: "pending", label: "Ожидание" },
+  { value: "closed",  label: "Закрытые" },
+];
 
 export default function Conversations() {
-  const [status, setStatus] = useState<string>("all");
+  const [tab, setTab] = useState<TabValue>("all");
   const [search, setSearch] = useState("");
 
-  const { data: conversations, isLoading } = useListConversations({
-    status: status !== "all" ? (status as any) : undefined,
-  });
+  const { data: conversations, isLoading } = useListConversations(
+    { status: tab !== "all" ? (tab as any) : undefined },
+    { query: { refetchInterval: 8000 } }
+  );
 
   const filtered = (conversations ?? []).filter((c) => {
     if (!search) return true;
@@ -42,107 +74,184 @@ export default function Conversations() {
     );
   });
 
+  const counts = {
+    all:     (conversations ?? []).length,
+    active:  (conversations ?? []).filter((c) => c.status === "active").length,
+    pending: (conversations ?? []).filter((c) => c.status === "pending").length,
+    closed:  (conversations ?? []).filter((c) => c.status === "closed").length,
+  };
+
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto flex flex-col h-full space-y-6 overflow-y-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Диалоги</h1>
-          <p className="text-muted-foreground">Все диалоги клиентов с AI агентом.</p>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-56">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск..."
-              className="pl-9 h-9"
-            />
+    <div className="flex flex-col h-full overflow-hidden bg-background">
+
+      {/* ── HEADER ──────────────────────────────────────────────────── */}
+      <div className="px-6 pt-6 pb-0 shrink-0 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Диалоги</h1>
+            <p className="text-sm text-muted-foreground">
+              Все переписки клиентов с AI агентом Aziz
+            </p>
           </div>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[150px] h-9">
-              <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Статус" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все</SelectItem>
-              <SelectItem value="active">Активные</SelectItem>
-              <SelectItem value="pending">Ожидание</SelectItem>
-              <SelectItem value="closed">Закрытые</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 px-3 py-1.5 rounded-full">
+              <Bot className="w-3.5 h-3.5 text-primary" />
+              <span>AI режим активен</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск по имени, телефону или каналу..."
+            className="pl-9 h-9 bg-muted/40 border-0 focus-visible:ring-1"
+          />
+        </div>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-1 border-b">
+          {TABS.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => setTab(t.value)}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 -mb-px ${
+                tab === t.value
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+              {counts[t.value] > 0 && (
+                <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                  tab === t.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}>
+                  {counts[t.value]}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden flex flex-col">
+      {/* ── LIST ────────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="p-8 flex justify-center text-muted-foreground animate-pulse">Загрузка...</div>
+          <div className="p-8 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 p-4 animate-pulse">
+                <div className="w-11 h-11 rounded-full bg-muted shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-muted rounded w-1/3" />
+                  <div className="h-3 bg-muted rounded w-2/3" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 flex flex-col items-center justify-center text-center">
-            <MessageSquare className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
-            <h3 className="text-lg font-medium">Диалоги не найдены</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {search ? "Измените поисковый запрос." : "Начните новый чат через AI Чат."}
+          <div className="p-16 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+              <MessageSquare className="w-8 h-8 text-muted-foreground opacity-40" />
+            </div>
+            <h3 className="text-base font-semibold">Диалоги не найдены</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+              {search ? "Попробуйте другой запрос" : "Начните новый чат через AI Чат"}
             </p>
           </div>
         ) : (
-          <div className="divide-y overflow-auto">
-            {filtered.map((conv) => (
-              <Link
-                key={conv.id}
-                href={`/conversations/${conv.id}`}
-                className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer group block"
-              >
-                <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center shrink-0">
-                  <ChannelIcon channel={conv.channel} className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-0.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-semibold truncate">
-                        {conv.customerName || conv.customerPhone || "Неизвестный клиент"}
-                      </span>
-                      <Badge
-                        variant={conv.status === "active" ? "default" : conv.status === "pending" ? "secondary" : "outline"}
-                        className="text-[10px] h-5 shrink-0"
-                      >
-                        {statusLabels[conv.status] ?? conv.status}
-                      </Badge>
-                      {conv.operatorMode && (
-                        <Badge variant="secondary" className="text-[10px] h-5 bg-amber-100 text-amber-700 border-amber-200 shrink-0">
-                          Оператор
-                        </Badge>
-                      )}
+          <div>
+            {filtered.map((conv, idx) => {
+              const name = conv.customerName || conv.customerPhone || "Неизвестный";
+              const cfg = STATUS_CONFIG[conv.status] ?? STATUS_CONFIG.closed!;
+              const lead = (conv as any).lead;
+              const segment = lead?.segment as string | undefined;
+              const segCfg = segment ? SEGMENT_CONFIG[segment] : undefined;
+              const SegIcon = segCfg?.icon;
+
+              return (
+                <Link
+                  key={conv.id}
+                  href={`/conversations/${conv.id}`}
+                  className="block"
+                >
+                  <div className={`flex items-center gap-3.5 px-5 py-3.5 hover:bg-muted/40 transition-colors cursor-pointer border-b border-border/50 ${
+                    idx === 0 ? "border-t border-border/50" : ""
+                  }`}>
+
+                    {/* Avatar */}
+                    <div className="relative shrink-0">
+                      <div className={`w-11 h-11 rounded-full ${getAvatarColor(name)} flex items-center justify-center text-white font-bold text-sm`}>
+                        {getInitials(name)}
+                      </div>
+                      <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${cfg.dot}`} />
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap ml-2 shrink-0">
-                      {conv.lastMessageAt ? format(new Date(conv.lastMessageAt), "d MMM, HH:mm", { locale: ru }) : ""}
-                    </span>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Row 1: name + badges + time */}
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-semibold text-sm truncate">{name}</span>
+                          {conv.operatorMode && (
+                            <span className="shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 flex items-center gap-0.5">
+                              <Headset className="w-2.5 h-2.5" /> Оператор
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
+                          {formatTime(conv.lastMessageAt)}
+                        </span>
+                      </div>
+
+                      {/* Row 2: last message */}
+                      <p className="text-[12px] text-muted-foreground truncate leading-snug mb-1">
+                        {conv.lastMessage || "Сообщений пока нет"}
+                      </p>
+
+                      {/* Row 3: channel + segment + status */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
+                          <ChannelIcon channel={conv.channel} className="w-3 h-3" />
+                          <span>{conv.channel === "telegram" ? "Telegram" : conv.channel === "web" ? "Web" : conv.channel}</span>
+                        </div>
+                        {conv.leadId && (
+                          <span className="text-[10px] text-muted-foreground/50">· Лид #{conv.leadId}</span>
+                        )}
+                        {SegIcon && segCfg && (
+                          <div className={`flex items-center gap-0.5 text-[10px] font-medium ${segCfg.color}`}>
+                            <SegIcon className="w-2.5 h-2.5" />
+                            <span>{segCfg.label}</span>
+                          </div>
+                        )}
+                        <span className={`ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${cfg.badge}`}>
+                          {cfg.label}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {conv.lastMessage || "Сообщений пока нет"}
-                  </p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-[10px] text-muted-foreground/60 capitalize">
-                      {channelLabels[conv.channel] ?? conv.channel}
-                    </span>
-                    {conv.leadId && (
-                      <>
-                        <span className="text-[10px] text-muted-foreground/40">•</span>
-                        <span className="text-[10px] text-muted-foreground/60">Лид #{conv.leadId}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
 
+      {/* ── FOOTER ──────────────────────────────────────────────────── */}
       {!isLoading && (
-        <p className="text-xs text-muted-foreground">
-          Всего {conversations?.length ?? 0} диалогов, показано {filtered.length}
-        </p>
+        <div className="px-5 py-2.5 border-t bg-muted/20 shrink-0 flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            Показано <span className="font-medium text-foreground">{filtered.length}</span> из {conversations?.length ?? 0} диалогов
+          </span>
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+            {counts.active} активных
+          </span>
+        </div>
       )}
     </div>
   );
