@@ -1,7 +1,7 @@
 import React from "react";
 import { useGetDashboardStats, useGetRecentActivity } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Users, Activity, Flame, CheckSquare, TrendingUp } from "lucide-react";
+import { MessageSquare, Users, Activity, Flame, CheckSquare, TrendingUp, Target } from "lucide-react";
 import { ChannelIcon } from "@/components/channel-icon";
 import { Link } from "wouter";
 import { format } from "date-fns";
@@ -167,6 +167,29 @@ export default function Dashboard() {
                 <span className="font-semibold text-green-500">{stats?.bookedLeads ?? 0}</span>
               </div>
             </div>
+
+            {stats && (stats.totalLeads ?? 0) > 0 && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Target className="w-3 h-3" />
+                    <span>Конверсия в бронь</span>
+                  </div>
+                  <span className="text-sm font-bold text-primary">
+                    {Math.round(((stats.bookedLeads ?? 0) / (stats.totalLeads ?? 1)) * 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all"
+                    style={{ width: `${Math.round(((stats.bookedLeads ?? 0) / (stats.totalLeads ?? 1)) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {stats.bookedLeads ?? 0} из {stats.totalLeads ?? 0} лидов стали клиентами
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

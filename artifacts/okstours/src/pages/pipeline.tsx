@@ -104,8 +104,8 @@ const COLUMNS: Column[] = [
   },
   {
     id: "lost",
-    label: "ПОТЕРЯНО",
-    sublabel: "Нужно вернуть",
+    label: "ПОТЕРЯН",
+    sublabel: "Не заинтересован",
     color: "border-red-400",
     headerBg: "bg-red-500",
     dotColor: "bg-red-400",

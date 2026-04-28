@@ -375,15 +375,21 @@ export default function ConversationDetail() {
                     {isUser ? <User size={11} /> : isOperatorMsg ? <Headset size={11} /> : <Bot size={11} />}
                   </div>
                   <div className={`max-w-[75%] ${isUser ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
-                    {isOperatorMsg && (
-                      <p className="text-[10px] text-amber-600 font-semibold ml-1">Оператор</p>
-                    )}
+                    {isOperatorMsg ? (
+                      <p className="text-[10px] text-amber-600 font-semibold ml-1 flex items-center gap-1">
+                        <Headset className="w-2.5 h-2.5" /> Оператор
+                      </p>
+                    ) : !isUser ? (
+                      <p className="text-[10px] text-primary font-semibold ml-1 flex items-center gap-1">
+                        <Bot className="w-2.5 h-2.5" /> Aziz AI
+                      </p>
+                    ) : null}
                     <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
                       isUser
                         ? "bg-primary text-primary-foreground rounded-br-sm"
                         : isOperatorMsg
                         ? "bg-amber-50 border border-amber-200 text-foreground rounded-bl-sm"
-                        : "bg-card border shadow-sm text-foreground rounded-bl-sm"
+                        : "bg-blue-50 border border-blue-100 text-foreground rounded-bl-sm"
                     }`}>
                       {msg.content}
                     </div>
