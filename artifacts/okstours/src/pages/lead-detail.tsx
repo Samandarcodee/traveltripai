@@ -77,6 +77,7 @@ export default function LeadDetail() {
   const [bookNotes, setBookNotes] = useState("");
 
   const { data: tasks, refetch: refetchTasks } = useListLeadTasks(id, { query: { enabled: !!id } });
+  const tasksList = Array.isArray(tasks) ? tasks : [];
   const createTaskMutation = useCreateLeadTask();
   const updateTaskMutation = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
@@ -550,7 +551,7 @@ export default function LeadDetail() {
             <div>
               <h3 className="font-semibold text-sm">Список задач</h3>
               <p className="text-xs text-muted-foreground">
-                {tasks?.filter(t => t.status === "open").length ?? 0} открытых, {tasks?.filter(t => t.status === "completed").length ?? 0} выполнено
+                {tasksList.filter(t => t.status === "open").length} открытых, {tasksList.filter(t => t.status === "completed").length} выполнено
               </p>
             </div>
             {!addingTask && (
@@ -619,7 +620,7 @@ export default function LeadDetail() {
             </div>
           ) : (
             <div className="space-y-2">
-              {(tasks ?? []).map((task) => {
+              {tasksList.map((task) => {
                 const isDone = task.status === "completed";
                 const isOverdue = task.dueDate && !isDone && new Date(task.dueDate) < new Date();
                 const priorityConfig = {

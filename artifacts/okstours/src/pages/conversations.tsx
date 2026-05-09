@@ -10,21 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ChannelIcon } from "@/components/channel-icon";
-
-const AVATAR_COLORS = [
-  "bg-blue-500", "bg-purple-500", "bg-emerald-500",
-  "bg-amber-500", "bg-rose-500", "bg-indigo-500", "bg-teal-500",
-];
-function getInitials(name: string | null): string {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0]! + parts[1][0]!).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
-function getAvatarColor(name: string | null): string {
-  if (!name) return AVATAR_COLORS[0]!;
-  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]!;
-}
+import { getInitials, getAvatarColor } from "@/lib/avatar";
 
 function formatTime(date: string | null): string {
   if (!date) return "";
@@ -64,7 +50,9 @@ export default function Conversations() {
     { query: { refetchInterval: 8000 } }
   );
 
-  const filtered = (conversations ?? []).filter((c) => {
+  const conversationsList = Array.isArray(conversations) ? conversations : [];
+
+  const filtered = conversationsList.filter((c) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -75,10 +63,10 @@ export default function Conversations() {
   });
 
   const counts = {
-    all:     (conversations ?? []).length,
-    active:  (conversations ?? []).filter((c) => c.status === "active").length,
-    pending: (conversations ?? []).filter((c) => c.status === "pending").length,
-    closed:  (conversations ?? []).filter((c) => c.status === "closed").length,
+    all:     conversationsList.length,
+    active:  conversationsList.filter((c) => c.status === "active").length,
+    pending: conversationsList.filter((c) => c.status === "pending").length,
+    closed:  conversationsList.filter((c) => c.status === "closed").length,
   };
 
   return (

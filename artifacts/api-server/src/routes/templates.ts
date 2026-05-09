@@ -1,57 +1,165 @@
-import { Router } from "express";
+import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { templatesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { logger } from "../lib/logger";
+import { CreateTemplateBody, UpdateTemplateBody, GetTemplateParams } from "../lib/validation";
+import { ApiErrorException } from "../middlewares/error-handler";
 
-const router = Router();
+const router: IRouter = Router();
 
-router.get("/templates", async (req, res) => {
+router.get("/templates", async (req, res, next) => {
   try {
-    const templates = await db.select().from(templatesTable).orderBy(templatesTable.sortOrder, templatesTable.id);
-    res.json(templates);
+    const templates = await db
+      .select()
+      .from(templatesTable)
+      .orderBy(templatesTable.sortOrder, templatesTable.id);
+    
+    res.json({
+      success: true,
+      data: templates,
+    });
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch templates" });
+    logger.error({ error: err }, "Failed to fetch templates");
+    next(new ApiErrorException("FETCH_FAILED", "Failed to fetch templates", 500));
   }
 });
 
-router.post("/templates", async (req, res) => {
+router.post("/templates", async (req, res, next) => {
   try {
-    const { category = "general", title, content, sortOrder = 0 } = req.body;
-    if (!title || !content) {
-      return res.status(400).json({ error: "title and content are required" });
+    const parsed = CreateTemplateBody.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ApiErrorException(
+        "VALIDATION_ERROR",
+        "Invalid template data",
+        400,
+        parsed.error.errors,
+      );
     }
-    const [template] = await db.insert(templatesTable).values({ category, title, content, sortOrder }).returning();
-    res.status(201).json(template);
+
+    const [template] = await db
+      .insert(templatesTable)
+      .values(parsed.data)
+      .returning();
+
+    logger.info({ templateId: template.id }, "Template created");
+
+    res.status(201).json({
+      success: true,
+      data: template,
+    });
   } catch (err) {
-    res.status(500).json({ error: "Failed to create template" });
+    if (err instanceof ApiErrorException) {
+      return next(err);
+    }
+    logger.error({ error: err }, "Failed to create template");
+    next(
+      new ApiErrorException(
+        "CREATE_FAILED",
+        "Failed to create template",
+        500,
+      ),
+    );
   }
 });
 
-router.patch("/templates/:id", async (req, res) => {
+router.patch("/templates/:id", async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id);
-    const { category, title, content, sortOrder } = req.body;
-    const updateData: Record<string, unknown> = {};
-    if (category !== undefined) updateData.category = category;
-    if (title !== undefined) updateData.title = title;
-    if (content !== undefined) updateData.content = content;
-    if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
-    const [template] = await db.update(templatesTable).set(updateData).where(eq(templatesTable.id, id)).returning();
-    if (!template) return res.status(404).json({ error: "Template not found" });
-    res.json(template);
+    const paramsResult = GetTemplateParams.safeParse({ id: req.params.id });
+    if (!paramsResult.success) {
+      throw new ApiErrorException(
+        "VALIDATION_ERROR",
+        "Invalid template ID",
+        400,
+      );
+    }
+
+    const bodyResult = UpdateTemplateBody.safeParse(req.body);
+    if (!bodyResult.success) {
+      throw new ApiErrorException(
+        "VALIDATION_ERROR",
+        "Invalid template data",
+        400,
+        bodyResult.error.errors,
+      );
+    }
+
+    const id = paramsResult.data.id;
+    const [template] = await db
+      .update(templatesTable)
+      .set(bodyResult.data)
+      .where(eq(templatesTable.id, id))
+      .returning();
+
+    if (!template) {
+      throw new ApiErrorException(
+        "NOT_FOUND",
+        "Template not found",
+        404,
+      );
+    }
+
+    logger.info({ templateId: id }, "Template updated");
+
+    res.json({
+      success: true,
+      data: template,
+    });
   } catch (err) {
-    res.status(500).json({ error: "Failed to update template" });
+    if (err instanceof ApiErrorException) {
+      return next(err);
+    }
+    logger.error({ error: err }, "Failed to update template");
+    next(
+      new ApiErrorException(
+        "UPDATE_FAILED",
+        "Failed to update template",
+        500,
+      ),
+    );
   }
 });
 
-router.delete("/templates/:id", async (req, res) => {
+router.delete("/templates/:id", async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id);
-    const [deleted] = await db.delete(templatesTable).where(eq(templatesTable.id, id)).returning();
-    if (!deleted) return res.status(404).json({ error: "Template not found" });
+    const paramsResult = GetTemplateParams.safeParse({ id: req.params.id });
+    if (!paramsResult.success) {
+      throw new ApiErrorException(
+        "VALIDATION_ERROR",
+        "Invalid template ID",
+        400,
+      );
+    }
+
+    const id = paramsResult.data.id;
+    const [deleted] = await db
+      .delete(templatesTable)
+      .where(eq(templatesTable.id, id))
+      .returning();
+
+    if (!deleted) {
+      throw new ApiErrorException(
+        "NOT_FOUND",
+        "Template not found",
+        404,
+      );
+    }
+
+    logger.info({ templateId: id }, "Template deleted");
+
     res.status(204).send();
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete template" });
+    if (err instanceof ApiErrorException) {
+      return next(err);
+    }
+    logger.error({ error: err }, "Failed to delete template");
+    next(
+      new ApiErrorException(
+        "DELETE_FAILED",
+        "Failed to delete template",
+        500,
+      ),
+    );
   }
 });
 

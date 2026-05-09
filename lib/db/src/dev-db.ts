@@ -1,61 +1,44 @@
+/**
+ * In-memory PostgreSQL for local development.
+ * Used automatically when DATABASE_URL is not set.
+ * Powered by pg-mem — no external database needed.
+ */
+import { newDb } from "pg-mem";
 import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
 import * as schema from "./schema";
+import {
+  conversationsTable,
+  messagesTable,
+  leadsTable,
+  activityTable,
+  promotionsTable,
+  templatesTable,
+  settingsTable,
+  tasksTable,
+} from "./schema";
 
-export * from "./schema";
-
-async function init() {
-  if (process.env.DATABASE_URL) {
-    const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-    const db = drizzle(pool, { schema });
-    return { pool, db };
-  }
-
-  // Development: in-memory PostgreSQL via pg-mem (no external DB needed)
-  console.warn(
-    "[db] DATABASE_URL not set — using in-memory dev DB (data resets on restart)",
-  );
-  const { newDb } = await import("pg-mem");
+function createDevDb() {
   const mem = newDb();
-  const { Pool: MemPool } = mem.adapters.createPg();
-  const rawPool = new MemPool();
 
-  // pg-mem doesn't support 'types.getTypeParser' or 'rowMode: array' used by drizzle-orm v0.45.
-  // We strip both from query configs and convert object rows → array rows when rowMode was requested.
-  function adaptQuery(origQuery: Function, config: any, values?: any[]) {
-    if (!config || typeof config !== "object") return origQuery(config, values);
-    const needsArrayRows = config.rowMode === "array";
-    const { types: _t, rowMode: _r, ...rest } = config;
-    const hasStripped = "types" in config || "rowMode" in config;
-    const promise: Promise<any> = hasStripped ? origQuery(rest, values) : origQuery(config, values);
-    if (!needsArrayRows) return promise;
-    return promise.then((result: any) => {
-      if (result?.rows && result?.fields) {
-        const names: string[] = result.fields.map((f: any) => f.name);
-        result.rows = result.rows.map((row: any) => names.map((n) => row[n]));
-      }
-      return result;
-    });
-  }
+  // Patch: pg-mem doesn't support `now()` timezone cast — use a shim
+  mem.public.registerFunction({
+    name: "now",
+    returns: { type: "text" } as any,
+    implementation: () => new Date().toISOString(),
+  });
 
-  function patchClient(client: any) {
-    const origQuery = client.query.bind(client);
-    client.query = (config: any, values?: any[]) => adaptQuery(origQuery, config, values);
-    return client;
-  }
+  // Build a fake pg.Pool from the pg-mem adapter
+  const { Pool } = mem.adapters.createPg();
+  const pool = new Pool();
+  const db = drizzle(pool as any, { schema });
 
-  const origConnect = rawPool.connect.bind(rawPool);
-  rawPool.connect = async function (...args: any[]) {
-    const client = await origConnect(...args);
-    return patchClient(client);
-  } as any;
+  return { pool, db };
+}
 
-  const origPoolQuery = rawPool.query.bind(rawPool);
-  rawPool.query = (config: any, values?: any[]) => adaptQuery(origPoolQuery, config, values) as any;
+export async function createAndMigrateDevDb() {
+  const { pool, db } = createDevDb();
 
-  const pool = rawPool as unknown as pg.Pool;
-  const db = drizzle(pool, { schema });
-
+  // Create tables manually using raw SQL (pg-mem supports CREATE TABLE)
   const client = await pool.connect();
   try {
     await client.query(`
@@ -73,6 +56,7 @@ async function init() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
       CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
         conversation_id INTEGER NOT NULL,
@@ -80,6 +64,7 @@ async function init() {
         content TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
       CREATE TABLE IF NOT EXISTS leads (
         id SERIAL PRIMARY KEY,
         name TEXT,
@@ -110,6 +95,7 @@ async function init() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
       CREATE TABLE IF NOT EXISTS activity (
         id SERIAL PRIMARY KEY,
         type TEXT NOT NULL,
@@ -118,6 +104,7 @@ async function init() {
         lead_id INTEGER,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
       CREATE TABLE IF NOT EXISTS promotions (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
@@ -128,6 +115,7 @@ async function init() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
       CREATE TABLE IF NOT EXISTS templates (
         id SERIAL PRIMARY KEY,
         category TEXT NOT NULL DEFAULT 'general',
@@ -137,12 +125,14 @@ async function init() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
       CREATE TABLE IF NOT EXISTS settings (
         id SERIAL PRIMARY KEY,
         key TEXT NOT NULL UNIQUE,
         value TEXT NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
       CREATE TABLE IF NOT EXISTS tasks (
         id SERIAL PRIMARY KEY,
         lead_id INTEGER NOT NULL,
@@ -155,51 +145,49 @@ async function init() {
       );
     `);
 
+    // Seed demo data
     await client.query(`
-      INSERT INTO leads (name, phone, segment, status, destination, budget, notes) VALUES
+      INSERT INTO leads (name, phone, segment, status, destination, budget, notes)
+      VALUES
         ('Алексей Иванов', '+998901234567', 'hot', 'new', 'Дубай', '$2000', 'Интересуется туром на 7 ночей'),
         ('Мария Смирнова', '+998911111111', 'warm', 'contacted', 'Стамбул', '$1500', 'Хочет тур на двоих'),
         ('Бехзод Рашидов', '+998921234567', 'cold', 'new', 'Анталья', '$1200', NULL),
         ('Дилноза Юсупова', '+998931234567', 'hot', 'qualified', 'Бали', '$3000', 'Медовый месяц'),
-        ('Сергей Петров', '+998941234567', 'warm', 'booked', 'Египет', '$1800', 'Уже забронировал');
+        ('Сергей Петров', '+998941234567', 'warm', 'booked', 'Египет', '$1800', 'Уже забронировал')
+      ON CONFLICT DO NOTHING;
 
-      INSERT INTO conversations (channel, status, customer_name, customer_phone, last_message, last_message_at, lead_id) VALUES
+      INSERT INTO conversations (channel, status, customer_name, customer_phone, last_message, last_message_at, lead_id)
+      VALUES
         ('telegram', 'active', 'Алексей Иванов', '+998901234567', 'Здравствуйте! Интересует тур в Дубай', NOW(), 1),
         ('web', 'pending', 'Мария Смирнова', '+998911111111', 'Когда можно вылететь?', NOW() - INTERVAL '2 hours', 2),
-        ('telegram', 'closed', 'Сергей Петров', '+998941234567', 'Спасибо! Жду подтверждения.', NOW() - INTERVAL '1 day', 5);
+        ('telegram', 'closed', 'Сергей Петров', '+998941234567', 'Спасибо! Жду подтверждения.', NOW() - INTERVAL '1 day', 5)
+      ON CONFLICT DO NOTHING;
 
-      INSERT INTO messages (conversation_id, role, content) VALUES
-        (1, 'user', 'Здравствуйте! Интересует тур в Дубай'),
-        (1, 'assistant', 'Здравствуйте! Я Aziz из OKSTours. Отличный выбор — Дубай! Когда планируете поездку?'),
-        (2, 'user', 'Когда можно вылететь?'),
-        (3, 'user', 'Спасибо! Жду подтверждения.');
-
-      INSERT INTO templates (category, title, content, sort_order) VALUES
+      INSERT INTO templates (category, title, content, sort_order)
+      VALUES
         ('greeting', 'Приветствие', 'Здравствуйте! Меня зовут Aziz, я менеджер OKSTours. Чем могу помочь?', 1),
-        ('tour', 'Предложение тура', 'Отличный выбор! Мы предлагаем тур за {price}. Когда планируете поездку?', 2),
-        ('payment', 'Детали оплаты', 'Для бронирования необходим аванс 30%. Оплата картой или переводом.', 3);
+        ('tour', 'Предложение тура', 'Отличный выбор! Мы предлагаем тур в {destination} за {price}. Когда планируете поездку?', 2),
+        ('payment', 'Детали оплаты', 'Для бронирования необходим аванс 30%. Оплата возможна картой или переводом.', 3)
+      ON CONFLICT DO NOTHING;
 
-      INSERT INTO settings (key, value) VALUES
+      INSERT INTO settings (key, value)
+      VALUES
         ('ai_enabled', 'true'),
         ('telegram_bot_username', ''),
-        ('openai_model', 'gpt-4o-mini');
+        ('openai_model', 'gpt-4o-mini')
+      ON CONFLICT (key) DO NOTHING;
 
-      INSERT INTO activity (type, description, conversation_id, lead_id) VALUES
+      INSERT INTO activity (type, description, conversation_id, lead_id)
+      VALUES
         ('new_lead', 'Новый лид: Алексей Иванов (Дубай)', 1, 1),
         ('new_message', 'Сообщение от Мария Смирнова', 2, 2),
-        ('status_change', 'Лид Сергей Петров → Забронировано', 3, 5);
+        ('status_change', 'Лид Сергей Петров → Забронировано', 3, 5)
+      ON CONFLICT DO NOTHING;
     `);
   } finally {
     client.release();
   }
 
+  console.log("[dev-db] In-memory PostgreSQL ready with demo data");
   return { pool, db };
-}
-
-// Top-level await — module initialization waits for DB before any import resolves
-export const { pool, db } = await init();
-
-// Also export initDb for explicit control (used by server startup in older flows)
-export async function initDb() {
-  // No-op: initialization happens at module load via top-level await above
 }

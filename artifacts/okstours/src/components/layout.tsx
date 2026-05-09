@@ -123,16 +123,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 return (
                   <Link key={item.href} href={item.href} className="block">
                     <span
-                      className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-150 text-sm ${
+                      className={`relative flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
                         isActive
                           ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                           : "text-sidebar-foreground/70 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
                       }`}
+                      style={{ transition: "background-color 150ms ease, color 150ms ease" }}
                     >
+                      {isActive && (
+                        <span
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r"
+                          aria-hidden="true"
+                        />
+                      )}
                       <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
                       <span className="flex-1">{item.label}</span>
                       {item.badge !== null && (
-                        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+                        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none animate-pulse">
                           {item.badge}
                         </span>
                       )}

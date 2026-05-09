@@ -6,6 +6,7 @@ import { ChannelIcon } from "@/components/channel-icon";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { DashboardSkeleton } from "@/components/page-skeleton";
 
 const activityIcons: Record<string, React.ReactNode> = {
   new_lead: <Users className="h-3.5 w-3.5 text-blue-500" />,
@@ -21,11 +22,7 @@ export default function Dashboard() {
   const { data: activity, isLoading: activityLoading } = useGetRecentActivity();
 
   if (statsLoading || activityLoading) {
-    return (
-      <div className="p-8 flex items-center justify-center h-full">
-        <div className="animate-pulse text-muted-foreground">Загрузка...</div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -96,7 +93,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {activity?.map((item) => (
+              {Array.isArray(activity) ? activity.map((item) => (
                 <div key={item.id} className="flex items-start gap-3">
                   <div className="mt-0.5 bg-muted rounded-full h-7 w-7 flex items-center justify-center shrink-0">
                     {activityIcons[item.type] ?? <Activity className="h-3.5 w-3.5 text-muted-foreground" />}
@@ -113,8 +110,7 @@ export default function Dashboard() {
                     </Link>
                   )}
                 </div>
-              ))}
-              {(!activity || activity.length === 0) && (
+              )) : (
                 <div className="text-center py-8 text-muted-foreground text-sm">
                   Активности пока нет
                 </div>

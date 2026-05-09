@@ -21,28 +21,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-
-function isRotting(lead: { updatedAt: string; status: string }): boolean {
-  const days = (Date.now() - new Date(lead.updatedAt).getTime()) / (1000 * 60 * 60 * 24);
-  return days > 3 && lead.status !== "booked" && lead.status !== "lost";
-}
-
-const AVATAR_COLORS = [
-  "bg-blue-500", "bg-purple-500", "bg-emerald-500",
-  "bg-amber-500", "bg-rose-500", "bg-indigo-500", "bg-teal-500",
-];
-
-function getInitials(name: string | null): string {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
-
-function getAvatarColor(name: string | null): string {
-  if (!name) return AVATAR_COLORS[0];
-  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
-}
+import { getInitials, getAvatarColor, isRotting } from "@/lib/avatar";
 
 type Lead = {
   id: number;
@@ -228,6 +207,8 @@ export default function Pipeline() {
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
   const dragLeadRef = useRef<number | null>(null);
 
+  const leadsList = Array.isArray(leads) ? leads : [];
+
   const handleDragStart = (e: React.DragEvent, leadId: number) => {
     dragLeadRef.current = leadId;
     setDraggingId(leadId);
@@ -256,7 +237,7 @@ export default function Pipeline() {
     const leadId = dragLeadRef.current;
     if (!leadId) return;
 
-    const lead = leads?.find((l) => l.id === leadId);
+    const lead = leadsList.find((l) => l.id === leadId);
     if (!lead || lead.status === colId) {
       setDraggingId(null);
       setDragOverCol(null);
@@ -276,7 +257,7 @@ export default function Pipeline() {
     setDragOverCol(null);
   };
 
-  const filtered = (leads ?? []).filter((lead) => {
+  const filtered = leadsList.filter((lead) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -292,8 +273,8 @@ export default function Pipeline() {
     return acc;
   }, {});
 
-  const totalLeads = leads?.length ?? 0;
-  const rottingCount = (leads ?? []).filter(isRotting).length;
+  const totalLeads = leadsList.length;
+  const rottingCount = leadsList.filter(isRotting).length;
 
   return (
     <div className="h-full flex flex-col bg-background overflow-hidden">

@@ -33,6 +33,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
+import { getInitials, getAvatarColor } from "@/lib/avatar";
 
 const statusLabels: Record<string, string> = {
   active: "Активный",
@@ -56,21 +57,6 @@ const leadStatusColors: Record<string, string> = {
   lost: "bg-red-100 text-red-700 border-red-200",
 };
 
-const AVATAR_COLORS = [
-  "bg-blue-500", "bg-purple-500", "bg-emerald-500",
-  "bg-amber-500", "bg-rose-500", "bg-indigo-500", "bg-teal-500",
-];
-function getInitials(name: string | null): string {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
-function getAvatarColor(name: string | null): string {
-  if (!name) return AVATAR_COLORS[0];
-  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
-}
-
 export default function ConversationDetail() {
   const params = useParams();
   const id = Number(params.id);
@@ -84,6 +70,7 @@ export default function ConversationDetail() {
     query: { enabled: !!id && !!conversation },
   });
   const { data: templates } = useListTemplates();
+  const templatesList = Array.isArray(templates) ? templates : [];
   const { data: lead } = useGetLead(conversation?.leadId ?? 0, {
     query: { enabled: !!conversation?.leadId },
   });
@@ -223,8 +210,8 @@ export default function ConversationDetail() {
     );
   };
 
-  const templatesByCategory: Record<string, typeof templates> = {};
-  (templates ?? []).forEach((t) => {
+  const templatesByCategory: Record<string, typeof templatesList> = {};
+  templatesList.forEach((t) => {
     if (!templatesByCategory[t.category]) templatesByCategory[t.category] = [];
     templatesByCategory[t.category]!.push(t);
   });

@@ -51,6 +51,7 @@ export default function Stats() {
   const { data: timeSeries, isLoading: tsLoading } = useGetTimeSeries({ period });
   const { data: dashboard } = useGetDashboardStats();
   const { data: leads } = useListLeads({});
+  const leadsList = Array.isArray(leads) ? leads : [];
 
   const formatDate = (date: string) => {
     if (period === "monthly") {
@@ -73,7 +74,7 @@ export default function Stats() {
   ].filter((s) => s.value > 0);
 
   const statusCounts: Record<string, number> = {};
-  (leads ?? []).forEach((l) => {
+  leadsList.forEach((l) => {
     statusCounts[l.status] = (statusCounts[l.status] ?? 0) + 1;
   });
   const statusData = Object.entries(statusCounts).map(([key, count]) => ({

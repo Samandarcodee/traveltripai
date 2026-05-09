@@ -55,6 +55,7 @@ const emptyForm = (): TemplateForm => ({
 
 export default function Templates() {
   const { data: templates, isLoading } = useListTemplates();
+  const templatesList = Array.isArray(templates) ? templates : [];
   const createMutation = useCreateTemplate();
   const updateMutation = useUpdateTemplate();
   const deleteMutation = useDeleteTemplate();
@@ -126,7 +127,7 @@ export default function Templates() {
     );
   };
 
-  const filtered = (templates ?? []).filter((t) => filterCat === "all" || t.category === filterCat);
+  const filtered = templatesList.filter((t) => filterCat === "all" || t.category === filterCat);
   const grouped: Record<string, typeof filtered> = {};
   filtered.forEach((t) => {
     if (!grouped[t.category]) grouped[t.category] = [];

@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { getInitials, getAvatarColor, isRotting } from "@/lib/avatar";
 
 const segmentColors: Record<string, string> = {
   hot: "bg-red-100 text-red-700 border-red-200",
@@ -34,29 +35,8 @@ const statusColors: Record<string, string> = {
   lost: "bg-red-100 text-red-700",
 };
 
-const AVATAR_COLORS = [
-  "bg-blue-500", "bg-purple-500", "bg-emerald-500",
-  "bg-amber-500", "bg-rose-500", "bg-indigo-500", "bg-teal-500",
-];
-
-function getInitials(name: string | null): string {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
-
-function getAvatarColor(name: string | null): string {
-  if (!name) return AVATAR_COLORS[0];
-  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
-}
-
 function daysSince(dateStr: string): number {
   return (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24);
-}
-
-function isRotting(lead: { updatedAt: string; status: string }): boolean {
-  return daysSince(lead.updatedAt) > 3 && lead.status !== "booked" && lead.status !== "lost";
 }
 
 export default function Leads() {
@@ -74,6 +54,7 @@ export default function Leads() {
     segment: segment !== "all" ? (segment as any) : undefined,
   });
 
+  const leadsList = Array.isArray(leads) ? leads : [];
   const createMutation = useCreateLead();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -112,7 +93,7 @@ export default function Leads() {
     );
   };
 
-  const filtered = (leads ?? []).filter((l) => {
+  const filtered = leadsList.filter((l) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -126,7 +107,7 @@ export default function Leads() {
 
   // Bulk messaging — filterable list
   const bulkLeads = useMemo(() => {
-    return (leads ?? []).filter((l) => {
+    return leadsList.filter((l) => {
       if (bulkSegment !== "all" && l.segment !== bulkSegment) return false;
       if (bulkSearch) {
         const q = bulkSearch.toLowerCase();
@@ -137,7 +118,7 @@ export default function Leads() {
       }
       return true;
     });
-  }, [leads, bulkSegment, bulkSearch]);
+  }, [leadsList, bulkSegment, bulkSearch]);
 
   const allBulkSelected = bulkLeads.length > 0 && bulkLeads.every((l) => selectedIds.has(l.id));
 
@@ -198,7 +179,7 @@ export default function Leads() {
   };
 
   const downloadCSV = () => {
-    const rows = (filtered ?? []).map((l) => ({
+    const rows = filtered.map((l) => ({
       Имя: l.name ?? "",
       Телефон: l.phone ?? "",
       Статус: statusLabels[l.status] ?? l.status,

@@ -13,6 +13,7 @@ node_modules
 
 # IDEs and editors
 /.idea
+.claude/
 .project
 .classpath
 .c9/
@@ -31,6 +32,8 @@ node_modules
 /.sass-cache
 /connect.lock
 /coverage
+/.codex-run-logs/
+*.env
 /libpeerconnection.log
 npm-debug.log
 yarn-error.log

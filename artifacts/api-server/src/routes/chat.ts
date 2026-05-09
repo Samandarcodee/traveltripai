@@ -4,6 +4,7 @@ import { eq, desc } from "drizzle-orm";
 import { SendMessageBody } from "@workspace/api-zod";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { logger } from "../lib/logger.js";
+import { AiLeadExtraction } from "../lib/validation.js";
 
 const router: IRouter = Router();
 
@@ -133,7 +134,24 @@ Faqat JSON qaytaring, boshqa hech narsa yozmang:
     const jsonMatch = rawJson.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return;
 
-    const extracted = JSON.parse(jsonMatch[0]);
+    let extracted: any;
+    try {
+      extracted = JSON.parse(jsonMatch[0]);
+      // Validate with Zod schema to ensure data integrity
+      const validated = AiLeadExtraction.safeParse(extracted);
+      if (!validated.success) {
+        logger.warn({ errors: validated.error.errors }, "AI extraction validation failed");
+        extracted = validated.data || extracted;
+      } else {
+        extracted = validated.data;
+      }
+    } catch (parseErr) {
+      logger.error(
+        { error: parseErr instanceof Error ? parseErr.message : String(parseErr), json: jsonMatch[0] },
+        "Failed to parse AI extraction JSON",
+      );
+      return;
+    }
 
     // Find lead for this conversation
     const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
@@ -150,7 +168,7 @@ Faqat JSON qaytaring, boshqa hech narsa yozmang:
     if (extracted.segment && ["hot", "warm", "cold"].includes(extracted.segment)) {
       updateFields.segment = extracted.segment;
     }
-    if (extracted.status && ["new", "contacted", "qualified"].includes(extracted.status)) {
+    if (extracted.status && ["new", "contacted", "qualified", "booked", "lost"].includes(extracted.status)) {
       updateFields.status = extracted.status;
     }
 

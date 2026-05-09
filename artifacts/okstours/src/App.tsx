@@ -1,48 +1,104 @@
+import React, { Suspense, lazy } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { PageSkeleton, DashboardSkeleton, ListSkeleton } from "@/components/page-skeleton";
+import { queryClient } from "@/lib/query-client";
 import { Layout } from "@/components/layout";
 
-import Dashboard from "@/pages/dashboard";
-import Chat from "@/pages/chat";
-import Conversations from "@/pages/conversations";
-import ConversationDetail from "@/pages/conversation-detail";
-import Leads from "@/pages/leads";
-import LeadDetail from "@/pages/lead-detail";
-import Promotions from "@/pages/promotions";
-import Stats from "@/pages/stats";
-import CallAnalysis from "@/pages/call-analysis";
-import Pipeline from "@/pages/pipeline";
-import TemplatesPage from "@/pages/templates";
-import Settings from "@/pages/settings";
-
-const queryClient = new QueryClient();
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Chat = lazy(() => import("@/pages/chat"));
+const Conversations = lazy(() => import("@/pages/conversations"));
+const ConversationDetail = lazy(() => import("@/pages/conversation-detail"));
+const Leads = lazy(() => import("@/pages/leads"));
+const LeadDetail = lazy(() => import("@/pages/lead-detail"));
+const Promotions = lazy(() => import("@/pages/promotions"));
+const Stats = lazy(() => import("@/pages/stats"));
+const CallAnalysis = lazy(() => import("@/pages/call-analysis"));
+const Pipeline = lazy(() => import("@/pages/pipeline"));
+const TemplatesPage = lazy(() => import("@/pages/templates"));
+const Settings = lazy(() => import("@/pages/settings"));
+const NotFound = lazy(() => import("@/pages/not-found"));
 
 function Router() {
   return (
     <Layout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/chat" component={Chat} />
-        <Route path="/conversations" component={Conversations} />
-        <Route path="/conversations/:id" component={ConversationDetail} />
-        <Route path="/leads" component={Leads} />
-        <Route path="/leads/:id" component={LeadDetail} />
-        <Route path="/pipeline" component={Pipeline} />
-        <Route path="/promotions" component={Promotions} />
-        <Route path="/templates" component={TemplatesPage} />
-        <Route path="/stats" component={Stats} />
-        <Route path="/call-analysis" component={CallAnalysis} />
-        <Route path="/settings" component={Settings} />
-        <Route component={NotFound} />
-      </Switch>
+      <ErrorBoundary>
+        <Switch>
+          <Route path="/">
+            <Suspense fallback={<DashboardSkeleton />}>
+              <Dashboard />
+            </Suspense>
+          </Route>
+          <Route path="/chat">
+            <Suspense fallback={<PageSkeleton />}>
+              <Chat />
+            </Suspense>
+          </Route>
+          <Route path="/conversations">
+            <Suspense fallback={<ListSkeleton />}>
+              <Conversations />
+            </Suspense>
+          </Route>
+          <Route path="/conversations/:id">
+            <Suspense fallback={<PageSkeleton />}>
+              <ConversationDetail />
+            </Suspense>
+          </Route>
+          <Route path="/leads">
+            <Suspense fallback={<PageSkeleton />}>
+              <Leads />
+            </Suspense>
+          </Route>
+          <Route path="/leads/:id">
+            <Suspense fallback={<PageSkeleton />}>
+              <LeadDetail />
+            </Suspense>
+          </Route>
+          <Route path="/pipeline">
+            <Suspense fallback={<PageSkeleton />}>
+              <Pipeline />
+            </Suspense>
+          </Route>
+          <Route path="/promotions">
+            <Suspense fallback={<PageSkeleton />}>
+              <Promotions />
+            </Suspense>
+          </Route>
+          <Route path="/templates">
+            <Suspense fallback={<PageSkeleton />}>
+              <TemplatesPage />
+            </Suspense>
+          </Route>
+          <Route path="/stats">
+            <Suspense fallback={<PageSkeleton />}>
+              <Stats />
+            </Suspense>
+          </Route>
+          <Route path="/call-analysis">
+            <Suspense fallback={<PageSkeleton />}>
+              <CallAnalysis />
+            </Suspense>
+          </Route>
+          <Route path="/settings">
+            <Suspense fallback={<PageSkeleton />}>
+              <Settings />
+            </Suspense>
+          </Route>
+          <Route>
+            <Suspense fallback={null}>
+              <NotFound />
+            </Suspense>
+          </Route>
+        </Switch>
+      </ErrorBoundary>
     </Layout>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -54,5 +110,3 @@ function App() {
     </QueryClientProvider>
   );
 }
-
-export default App;
