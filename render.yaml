@@ -12,8 +12,6 @@ services:
         fromDatabase:
           name: okstours-db
           property: connectionString
-      - key: API_KEYS
-        generateValue: true
       - key: OPENAI_API_KEY
         sync: false
       - key: ALLOWED_ORIGINS

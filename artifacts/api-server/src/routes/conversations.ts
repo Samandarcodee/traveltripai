@@ -35,12 +35,16 @@ async function sendToTelegram(externalId: string, text: string): Promise<void> {
 const router: IRouter = Router();
 
 function formatConv(c: typeof conversationsTable.$inferSelect) {
+  const lastMessageAt = c.lastMessageAt ?? (c as any).last_message_at;
+  const createdAt = c.createdAt ?? (c as any).created_at ?? new Date();
+  const updatedAt = c.updatedAt ?? (c as any).updated_at ?? createdAt;
+
   return {
     ...c,
     operatorMode: c.operatorMode === 1,
-    lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
-    createdAt: c.createdAt.toISOString(),
-    updatedAt: c.updatedAt.toISOString(),
+    lastMessageAt: lastMessageAt ? new Date(lastMessageAt).toISOString() : null,
+    createdAt: new Date(createdAt).toISOString(),
+    updatedAt: new Date(updatedAt).toISOString(),
   };
 }
 

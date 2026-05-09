@@ -110,10 +110,10 @@ export async function createAndMigrateDevDb() {
         title TEXT NOT NULL,
         description TEXT NOT NULL,
         discount TEXT,
-        valid_until TIMESTAMPTZ,
-        is_active INTEGER NOT NULL DEFAULT 1,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        destination TEXT,
+        valid_until TEXT,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
       CREATE TABLE IF NOT EXISTS templates (
@@ -135,11 +135,14 @@ export async function createAndMigrateDevDb() {
 
       CREATE TABLE IF NOT EXISTS tasks (
         id SERIAL PRIMARY KEY,
-        lead_id INTEGER NOT NULL,
+        lead_id INTEGER,
+        conversation_id INTEGER,
         title TEXT NOT NULL,
         description TEXT,
-        due_date TIMESTAMPTZ,
-        completed INTEGER NOT NULL DEFAULT 0,
+        due_date TEXT,
+        status TEXT NOT NULL DEFAULT 'open',
+        priority TEXT NOT NULL DEFAULT 'medium',
+        assigned_to TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
